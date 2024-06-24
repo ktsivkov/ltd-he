@@ -1,6 +1,10 @@
-export namespace game_stats {
+export namespace history {
 	
-	export class Stats {
+	export class GameHistory {
+	    outcome: string;
+	    eloDiff: number;
+	    date: string;
+	    gameId: number;
 	    file: string;
 	    totalGames: number;
 	    wins: number;
@@ -17,11 +21,15 @@ export namespace game_stats {
 	    payload: number[];
 	
 	    static createFrom(source: any = {}) {
-	        return new Stats(source);
+	        return new GameHistory(source);
 	    }
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.outcome = source["outcome"];
+	        this.eloDiff = source["eloDiff"];
+	        this.date = source["date"];
+	        this.gameId = source["gameId"];
 	        this.file = source["file"];
 	        this.totalGames = source["totalGames"];
 	        this.wins = source["wins"];
@@ -35,47 +43,6 @@ export namespace game_stats {
 	        this.player = source["player"];
 	        this.timestamp = this.convertValues(source["timestamp"], null);
 	        this.payload = source["payload"];
-	    }
-	
-		convertValues(a: any, classs: any, asMap: boolean = false): any {
-		    if (!a) {
-		        return a;
-		    }
-		    if (a.slice && a.map) {
-		        return (a as any[]).map(elem => this.convertValues(elem, classs));
-		    } else if ("object" === typeof a) {
-		        if (asMap) {
-		            for (const key of Object.keys(a)) {
-		                a[key] = new classs(a[key]);
-		            }
-		            return a;
-		        }
-		        return new classs(a);
-		    }
-		    return a;
-		}
-	}
-
-}
-
-export namespace history {
-	
-	export class GameHistory {
-	    outcome: string;
-	    eloDiff: number;
-	    stats?: game_stats.Stats;
-	    date: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new GameHistory(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.outcome = source["outcome"];
-	        this.eloDiff = source["eloDiff"];
-	        this.stats = this.convertValues(source["stats"], game_stats.Stats);
-	        this.date = source["date"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

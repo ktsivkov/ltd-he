@@ -2,7 +2,8 @@ package report
 
 import (
 	"fmt"
-	"ltd-he/pkg/utils"
+	"github.com/ktsivkov/ltd-he/pkg/player"
+	"github.com/ktsivkov/ltd-he/pkg/utils"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -14,18 +15,23 @@ const (
 	tokenPattern                    = `-([^"]+)`
 )
 
-const errorLogsDir = "War3ErrorLogs"
-const reportLogsDir = "ReportLogs"
 const reportFile = "BnetLogs.pld"
 
+func NewService() *Service {
+	return &Service{}
+}
+
 type Report struct {
+	File       string `json:"file"`
 	LastGameId int    `json:"lastGameId"`
 	Token      string `json:"token"`
 	Payload    []byte `json:"payload"`
 }
 
-func Load(path string, player string) (*Report, error) {
-	reportFilePath := filepath.Join(path, errorLogsDir, reportLogsDir, player, reportFile)
+type Service struct{}
+
+func (s *Service) Load(p *player.Player) (*Report, error) {
+	reportFilePath := filepath.Join(p.ReportFilePath, reportFile)
 	payload, err := os.ReadFile(reportFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("error reading report file: %w", err)
@@ -33,6 +39,7 @@ func Load(path string, player string) (*Report, error) {
 
 	content := string(payload)
 	report := &Report{
+		File:    reportFilePath,
 		Payload: payload,
 	}
 	var container string

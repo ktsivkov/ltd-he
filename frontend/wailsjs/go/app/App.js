@@ -5,3 +5,7 @@
 export function ListPlayers() {
   return window['go']['app']['App']['ListPlayers']();
 }
+
+export function LoadHistory(arg1) {
+  return window['go']['app']['App']['LoadHistory'](arg1);
+}

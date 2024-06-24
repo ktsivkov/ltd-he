@@ -1,71 +1,43 @@
 <script lang="ts" setup>
 import {reactive} from 'vue'
-import {ListPlayers} from '../../wailsjs/go/app/App'
-import {player} from "../../wailsjs/go/models";
+import {ListPlayers, LoadHistory} from '../../wailsjs/go/app/App'
+import {player, history} from "../../wailsjs/go/models";
 
 interface Data {
   players: Array<player.Player>,
+  history: Array<history.GameHistory>,
 }
 
 const data = reactive<Data>({
   players: [],
+  history: [],
 })
 
 ListPlayers().then(result => {
   data.players = result
 }).catch(error => console.error(error))
 
+function selectPlayer(p: player.Player) {
+  LoadHistory(p).then(result => {
+    data.history = result
+  }).catch(error => console.error(error))
+}
+
 </script>
 
 <template>
   <main>
     <div v-for="player in data.players">
-      <h1>{{player.battleTag}}</h1>
+      <h1 v-on:click="selectPlayer(player)">{{player.battleTag}}</h1>
+    </div>
+    <div v-for="game in data.history">
+      {{game.date}}
+      {{game.eloDiff}}
+      {{game.outcome}}
     </div>
   </main>
 </template>
 
 <style scoped>
-.result {
-  height: 20px;
-  line-height: 20px;
-  margin: 1.5rem auto;
-}
 
-.input-box .btn {
-  width: 60px;
-  height: 30px;
-  line-height: 30px;
-  border-radius: 3px;
-  border: none;
-  margin: 0 0 0 20px;
-  padding: 0 8px;
-  cursor: pointer;
-}
-
-.input-box .btn:hover {
-  background-image: linear-gradient(to top, #cfd9df 0%, #e2ebf0 100%);
-  color: #333333;
-}
-
-.input-box .input {
-  border: none;
-  border-radius: 3px;
-  outline: none;
-  height: 30px;
-  line-height: 30px;
-  padding: 0 10px;
-  background-color: rgba(240, 240, 240, 1);
-  -webkit-font-smoothing: antialiased;
-}
-
-.input-box .input:hover {
-  border: none;
-  background-color: rgba(255, 255, 255, 1);
-}
-
-.input-box .input:focus {
-  border: none;
-  background-color: rgba(255, 255, 255, 1);
-}
 </style>

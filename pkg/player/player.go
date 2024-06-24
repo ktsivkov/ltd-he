@@ -8,14 +8,17 @@ import (
 )
 
 const (
-	logsDir = "Legion_TD_TeamOZE"
+	errorLogsDir  = "War3ErrorLogs"
+	reportLogsDir = "ReportLogs"
+	logsDir       = "Legion_TD_TeamOZE"
 
 	playerDirPattern = `(\w+#\d+)`
 )
 
 type Player struct {
-	BattleTag   string `json:"battleTag"`
-	LogsDirPath string `json:"logsDirPath"`
+	BattleTag      string `json:"battleTag"`
+	LogsDirPath    string `json:"logsDirPath"`
+	ReportFilePath string `json:"reportFilePath"`
 }
 
 func NewService(customMapDataPath string) *Service {
@@ -39,8 +42,9 @@ func (s *Service) GetAll() ([]*Player, error) {
 	for _, item := range items {
 		if item.IsDir() && isBattleTag(item.Name()) {
 			players = append(players, &Player{
-				BattleTag:   item.Name(),
-				LogsDirPath: filepath.Join(logsDirPath, item.Name()),
+				BattleTag:      item.Name(),
+				LogsDirPath:    filepath.Join(logsDirPath, item.Name()),
+				ReportFilePath: filepath.Join(s.customMapDataPath, errorLogsDir, reportLogsDir, item.Name()),
 			})
 		}
 	}

@@ -1,20 +1,22 @@
-package stats
+package game_stats
 
 import (
 	"fmt"
-	"ltd-he/pkg/report"
-	"ltd-he/pkg/utils"
-	"os"
-	"path/filepath"
+	"math"
 	"regexp"
 	"time"
+
+	"github.com/ktsivkov/ltd-he/pkg/utils"
 )
 
-const (
-	DataFileTxt = "Data.txt"
-	DataFilePld = "Data.pld"
+type Outcome string
 
-	logsDir                 = "Legion_TD_TeamOZE"
+const (
+	OutcomeLeave Outcome = "LEAVE"
+	OutcomeWin   Outcome = "WIN"
+	OutcomeLoss  Outcome = "LOSS"
+	OutcomeDraw  Outcome = "DRAW"
+
 	statsFilePrefix         = "DataBU"
 	statsFileSuffix         = ".pld"
 	statsFilePattern        = `DataBU(\d+).pld`
@@ -29,7 +31,6 @@ const (
 	playerPattern           = `Player: (\w+#\d+)`
 	tokenPattern            = `BlzSetAbilityTooltip\('A017', "([^"]+)", 0\)`
 	timestampPattern        = `Time Stamp: (\d{1,2})\/(\d{1,2})\/(\d{4}) - (\d{1,2}):(\d{1,2}):(\d{1,2})`
-	timestampFormat         = "1/2/2006 - 15:04:05"
 
 	defaultElo = 1500
 )
@@ -51,50 +52,6 @@ type Stats struct {
 	Payload          []byte    `json:"payload"`
 }
 
-func LoadFromReport(path string, player string, rp *report.Report) (*Stats, error) {
-	return Load(path, player, getStatsFileName(rp.LastGameId))
-}
-
-func Load(path string, player string, file string) (*Stats, error) {
-	filePath := filepath.Join(path, logsDir, player, file)
-	payload, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %w", DataLoadingError, err)
-	}
-
-	stats := &Stats{
-		File:    filePath,
-		Payload: payload,
-	}
-
-	if err := stats.hydrate(); err != nil {
-		return nil, stats.descriptiveError(fmt.Errorf("%w: %w", DataParsingError, err))
-	}
-
-	stats.GameId, err = stats.gameId()
-	if err != nil {
-		return nil, stats.descriptiveError(fmt.Errorf("%w: %w", DataParsingError, err))
-	}
-
-	return stats, nil
-}
-
-func (s *Stats) Validate(player string) error {
-	if s.Player != player {
-		return s.descriptiveError(fmt.Errorf("player name does not match with the file: expected %s, got %s", player, s.Player))
-	}
-
-	gameId, err := s.gameId()
-	if err != nil {
-		return s.descriptiveError(err)
-	}
-
-	if gameId != s.TotalGames {
-		return s.descriptiveError(fmt.Errorf("total number of games does not match the gameId of the file: game=%d, total=%d", gameId, s.TotalGames))
-	}
-
-	return nil
-}
 func (s *Stats) hydrate() error {
 	var (
 		err     error
@@ -178,23 +135,33 @@ func (s *Stats) gameId() (int, error) {
 	return gameId, nil
 }
 
-func getStatsFileName(lastGameId int) string {
-	return fmt.Sprintf("%s%d%s", statsFilePrefix, lastGameId, statsFileSuffix)
-}
-
-func isStatsFilename(filename string) bool {
-	return regexp.MustCompile(statsFilePattern).MatchString(filename)
-}
-
-func parseTimestamp(timestampUnits []int) (time.Time, error) {
-	if len(timestampUnits) != 6 {
-		return time.Time{}, fmt.Errorf("invalid number of timestamp units: %d", len(timestampUnits))
+func (s *Stats) Outcome(lastGame *Stats) Outcome {
+	if lastGame == nil {
+		lastGame = getDefaultGameStats()
 	}
 
-	return time.Date(timestampUnits[2], time.Month(timestampUnits[0]), timestampUnits[1], timestampUnits[3], timestampUnits[4], timestampUnits[5], 0, time.Local), nil
+	if s.GamesLeftEarly > lastGame.GamesLeftEarly {
+		return OutcomeLeave
+	}
+	if s.Elo > lastGame.Elo {
+		return OutcomeWin
+	}
+	if s.Elo < lastGame.Elo {
+		return OutcomeLoss
+	}
+
+	return OutcomeDraw
 }
 
-func GetDefaultGameStats() *Stats {
+func (s *Stats) EloDiff(lastGame *Stats) int {
+	if lastGame == nil {
+		lastGame = getDefaultGameStats()
+	}
+
+	return int(math.Abs(float64(s.Elo - lastGame.Elo)))
+}
+
+func getDefaultGameStats() *Stats {
 	return &Stats{
 		File:             "",
 		TotalGames:       0,

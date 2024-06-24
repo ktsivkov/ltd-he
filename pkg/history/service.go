@@ -34,7 +34,7 @@ func (s *Service) LoadHistory(p *player.Player) ([]*GameHistory, error) {
 	for i := range r.LastGameId {
 		stats, err := s.gameStatsService.LoadGameStats(p, i+1)
 		if err != nil {
-			return nil, fmt.Errorf("could not load game game_stats: %v", err)
+			return nil, fmt.Errorf("could not load game game stats: %v", err)
 		}
 
 		history[lastElemId-i] = &GameHistory{

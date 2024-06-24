@@ -2,6 +2,7 @@
 import {reactive} from 'vue'
 import {LoadHistory} from '../../wailsjs/go/app/App'
 import {history, player} from "../../wailsjs/go/models";
+import HistoryItemComponent from "./HistoryItemComponent.vue";
 
 interface Props {
   selectedPlayer: player.Player
@@ -35,18 +36,7 @@ LoadHistory(props.selectedPlayer).then(result => {
       </tr>
       </thead>
       <tbody>
-      <tr v-for="game in data.history">
-        <td class="text-center">{{ game.gameId }}</td>
-        <td>{{ game.date }}</td>
-        <td>
-          {{ game.elo }}
-          <span v-if="['WIN', 'LOSS'].includes(game.outcome)" class="badge badge rounded-pill" :class="game.outcome == 'WIN' ? 'bg-success' : 'bg-danger'">{{`${game.outcome == 'WIN' ? '+' : '-'}${game.eloDiff}`}}</span>
-        </td>
-        <td>
-          {{ game.outcome }}
-          <span v-if="game.winsStreak > 1">&#128293; {{game.winsStreak}}</span>
-        </td>
-      </tr>
+      <HistoryItemComponent v-for="game in data.history" :game="game"></HistoryItemComponent>
       </tbody>
     </table>
   </main>

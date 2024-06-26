@@ -5,6 +5,8 @@ export namespace history {
 	    eloDiff: number;
 	    date: string;
 	    gameId: number;
+	    isLast: boolean;
+	    account?: player.Player;
 	    file: string;
 	    totalGames: number;
 	    wins: number;
@@ -30,6 +32,8 @@ export namespace history {
 	        this.eloDiff = source["eloDiff"];
 	        this.date = source["date"];
 	        this.gameId = source["gameId"];
+	        this.isLast = source["isLast"];
+	        this.account = this.convertValues(source["account"], player.Player);
 	        this.file = source["file"];
 	        this.totalGames = source["totalGames"];
 	        this.wins = source["wins"];
@@ -70,8 +74,10 @@ export namespace player {
 	
 	export class Player {
 	    battleTag: string;
-	    logsDirPath: string;
-	    reportFilePath: string;
+	    logsPathAbsolute: string;
+	    logsPathRelative: string;
+	    reportFilePathAbsolute: string;
+	    reportFilePathRelative: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Player(source);
@@ -80,8 +86,10 @@ export namespace player {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.battleTag = source["battleTag"];
-	        this.logsDirPath = source["logsDirPath"];
-	        this.reportFilePath = source["reportFilePath"];
+	        this.logsPathAbsolute = source["logsPathAbsolute"];
+	        this.logsPathRelative = source["logsPathRelative"];
+	        this.reportFilePathAbsolute = source["reportFilePathAbsolute"];
+	        this.reportFilePathRelative = source["reportFilePathRelative"];
 	    }
 	}
 

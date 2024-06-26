@@ -18,9 +18,11 @@ const data = reactive<Data>({
   history: []
 })
 
-LoadHistory(props.selectedPlayer).then(result => {
-  data.history = result
-}).catch(error => console.error(error))
+setInterval(() => {
+  LoadHistory(props.selectedPlayer).then(result => {
+    data.history = result
+  }).catch(error => console.error(error))
+}, 1000)
 
 </script>
 
@@ -29,10 +31,10 @@ LoadHistory(props.selectedPlayer).then(result => {
     <table v-if="data.history" class="table table-dark table-striped table-hover m-0">
       <thead>
       <tr>
-        <td class="text-center">#</td>
+        <td class="text-center">Outcome</td>
+        <td>ELO</td>
         <td>Date</td>
-        <td>Elo</td>
-        <td>Outcome</td>
+        <td>Options</td>
       </tr>
       </thead>
       <tbody>

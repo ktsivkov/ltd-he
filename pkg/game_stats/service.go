@@ -1,6 +1,7 @@
 package game_stats
 
 import (
+	"context"
 	"fmt"
 	"github.com/ktsivkov/ltd-he/pkg/player"
 	"os"
@@ -13,8 +14,8 @@ func NewService() *Service {
 
 type Service struct{}
 
-func (s *Service) LoadGameStats(p *player.Player, gameId int) (*Stats, error) {
-	filePath := filepath.Join(p.LogsDirPath, getStatsFileName(gameId))
+func (s *Service) Load(_ context.Context, p *player.Player, gameId int) (*Stats, error) {
+	filePath := filepath.Join(p.LogsPathAbsolute, getStatsFileName(gameId))
 	payload, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", DataLoadingError, err)

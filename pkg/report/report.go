@@ -1,6 +1,7 @@
 package report
 
 import (
+	"context"
 	"fmt"
 	"github.com/ktsivkov/ltd-he/pkg/player"
 	"github.com/ktsivkov/ltd-he/pkg/utils"
@@ -30,8 +31,8 @@ type Report struct {
 
 type Service struct{}
 
-func (s *Service) Load(p *player.Player) (*Report, error) {
-	reportFilePath := filepath.Join(p.ReportFilePath, reportFile)
+func (s *Service) Load(_ context.Context, p *player.Player) (*Report, error) {
+	reportFilePath := filepath.Join(p.ReportFilePathAbsolute, reportFile)
 	payload, err := os.ReadFile(reportFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("error reading report file: %w", err)

@@ -9,3 +9,7 @@ export function ListPlayers() {
 export function LoadHistory(arg1) {
   return window['go']['app']['App']['LoadHistory'](arg1);
 }
+
+export function Rollback(arg1) {
+  return window['go']['app']['App']['Rollback'](arg1);
+}

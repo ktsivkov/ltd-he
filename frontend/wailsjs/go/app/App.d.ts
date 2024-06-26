@@ -5,4 +5,6 @@ import {history} from '../models';
 
 export function ListPlayers():Promise<Array<player.Player>>;
 
-export function LoadHistory(arg1:player.Player):Promise<Array<history.GameHistory>>;
+export function LoadHistory(arg1:player.Player):Promise<history.History>;
+
+export function Rollback(arg1:history.GameHistory):Promise<void>;

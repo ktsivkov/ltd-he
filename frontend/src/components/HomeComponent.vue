@@ -1,24 +1,24 @@
 <script lang="ts" setup>
 import {reactive} from 'vue'
-import {ListPlayers, LoadHistory} from '../../wailsjs/go/app/App'
-import {history, player} from "../../wailsjs/go/models";
+import {ListPlayers} from '../../wailsjs/go/app/App'
+import {player} from "../../wailsjs/go/models";
 import HistoryComponent from "./HistoryComponent.vue";
 
 interface Data {
   players: Array<player.Player>,
-  history: Array<history.GameHistory>,
   selectedPlayer?: player.Player
 }
 
 const data = reactive<Data>({
   players: [],
-  history: [],
   selectedPlayer: undefined
 })
 
-ListPlayers().then(result => {
-  data.players = result
-}).catch(error => console.error(error))
+setInterval(() => {
+  ListPlayers().then(result => {
+    data.players = result
+  }).catch(error => console.error(error))
+}, 1000)
 
 function selectPlayer(p: player.Player) {
   data.selectedPlayer = p
@@ -57,6 +57,23 @@ function clearPlayerSelection() {
         </div>
       </div>
     </nav>
+
     <HistoryComponent v-if="data.selectedPlayer" :selected-player="data.selectedPlayer"></HistoryComponent>
+<!--    <div class="container">-->
+<!--      <div class="row">-->
+<!--        <div class="col-8">-->
+<!--          <HistoryComponent v-if="data.selectedPlayer" :selected-player="data.selectedPlayer"></HistoryComponent>-->
+<!--        </div>-->
+<!--        <div class="col-4">-->
+<!--          <div class="card text-white bg-dark shadow">-->
+<!--            <div class="card-header bg-gradient">Header</div>-->
+<!--            <div class="card-body">-->
+<!--              <h5 class="card-title">Secondary card title</h5>-->
+<!--              <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>-->
+<!--            </div>-->
+<!--          </div>-->
+<!--        </div>-->
+<!--      </div>-->
+<!--    </div>-->
   </main>
 </template>

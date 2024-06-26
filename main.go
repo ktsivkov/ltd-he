@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"github.com/ktsivkov/ltd-he/pkg/backup"
 	"github.com/ktsivkov/ltd-he/pkg/game_stats"
 	"github.com/ktsivkov/ltd-he/pkg/history"
 	"github.com/ktsivkov/ltd-he/pkg/player"
@@ -22,7 +23,7 @@ var assets embed.FS
 
 const DocumentsDir = "Documents"
 const Wc3Dir = "Warcraft III"
-const CustomMapDataDir = "CustomMapData"
+const AppDir = "ltd-he"
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
@@ -33,14 +34,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	customMapDataPath := filepath.Join(homeDir, DocumentsDir, Wc3Dir, CustomMapDataDir)
+	documentsPath := filepath.Join(homeDir, DocumentsDir)
+	wc3Path := filepath.Join(documentsPath, Wc3Dir)
+	appPath := filepath.Join(documentsPath, AppDir)
 
-	playerService := player.NewService(customMapDataPath)
+	playerService := player.NewService(wc3Path)
 	reportService := report.NewService()
 	gameStatsService := game_stats.NewService()
 	historyService := history.NewService(reportService, gameStatsService)
+	backupService := backup.NewService(appPath)
 
-	appInstance := app.New(logger, playerService, historyService)
+	appInstance := app.New(logger, playerService, historyService, backupService)
 	if err := wails.Run(&options.App{
 		Title:  "LegionTD History Editor - by ktsivkov",
 		Width:  1024,

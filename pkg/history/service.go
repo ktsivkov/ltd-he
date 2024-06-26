@@ -1,6 +1,7 @@
 package history
 
 import (
+	"context"
 	"fmt"
 	"github.com/ktsivkov/ltd-he/pkg/game_stats"
 	"github.com/ktsivkov/ltd-he/pkg/player"
@@ -21,28 +22,30 @@ type Service struct {
 	gameStatsService *game_stats.Service
 }
 
-func (s *Service) LoadHistory(p *player.Player) ([]*GameHistory, error) {
-	r, err := s.reportService.Load(p)
+func (s *Service) Load(ctx context.Context, p *player.Player) (History, error) {
+	r, err := s.reportService.Load(ctx, p)
 	if err != nil {
 		return nil, fmt.Errorf("could not load history: %v", err)
 	}
 
 	var lastGameStats *game_stats.Stats
 
-	history := make([]*GameHistory, r.LastGameId)
+	history := make(History, r.LastGameId)
 	lastElemId := r.LastGameId - 1
 	for i := range r.LastGameId {
-		stats, err := s.gameStatsService.LoadGameStats(p, i+1)
+		stats, err := s.gameStatsService.Load(ctx, p, i+1)
 		if err != nil {
 			return nil, fmt.Errorf("could not load game game stats: %v", err)
 		}
 
 		history[lastElemId-i] = &GameHistory{
 			GameId:  i + 1,
+			IsLast:  i == lastElemId,
 			Outcome: stats.Outcome(lastGameStats),
 			EloDiff: stats.EloDiff(lastGameStats),
-			Stats:   stats,
 			Date:    stats.Timestamp.Format(dateFormat),
+			Account: p,
+			Stats:   stats,
 		}
 
 		lastGameStats = stats

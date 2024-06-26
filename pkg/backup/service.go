@@ -28,7 +28,7 @@ func (s *Service) backupFolder(p *player.Player) string {
 }
 
 func (s *Service) generateBackupFilename(p *player.Player) string {
-	return time.Now().Format(backupTimestampFormat)
+	return fmt.Sprintf("%s%s", p.BattleTag, time.Now().Format(backupTimestampFormat))
 }
 
 func (s *Service) Backup(_ context.Context, p *player.Player) (*Backup, error) {

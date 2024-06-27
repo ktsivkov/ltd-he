@@ -34,7 +34,8 @@ func (a *App) OnStartup(ctx context.Context) {
 func (a *App) ListPlayers() ([]*player.Player, error) {
 	players, err := a.playerService.LoadAll(a.ctx)
 	if err != nil {
-		a.logger.Error("Could not get all players!", "error", err)
+		a.logger.Error("Could not list all players!", "error", err)
+		EmitAlert(a.ctx, AlertError, fmt.Sprintf("Could not list all players!\nError: %s", err))
 		return nil, err
 	}
 
@@ -44,7 +45,8 @@ func (a *App) ListPlayers() ([]*player.Player, error) {
 func (a *App) LoadHistory(p *player.Player) (history.History, error) {
 	playerHistory, err := a.historyService.Load(a.ctx, p)
 	if err != nil {
-		a.logger.Error("Could not get all players!", "error", err)
+		a.logger.Error("Could not load player history!", "error", err)
+		EmitAlert(a.ctx, AlertError, fmt.Sprintf("Could not load player history!\nError: %s", err))
 		return nil, err
 	}
 
@@ -70,4 +72,8 @@ func (a *App) Rollback(game *history.GameHistory) error {
 	EmitAlert(a.ctx, AlertSuccess, fmt.Sprintf("Successful rollback!"))
 
 	return nil
+}
+
+func (a *App) BackupFolder(p *player.Player) string {
+	return a.backupService.BackupFolder(p)
 }

@@ -2,6 +2,7 @@ package history
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/ktsivkov/ltd-he/pkg/game_stats"
@@ -36,6 +37,9 @@ func (s *Service) Load(ctx context.Context, p *player.Player) (History, error) {
 	for i := range r.LastGameId {
 		stats, err := s.gameStatsService.Load(ctx, p, i+1)
 		if err != nil {
+			if errors.Is(err, game_stats.GameFileNotFoundErr) {
+				continue
+			}
 			return nil, fmt.Errorf("could not load game game stats: %w", err)
 		}
 

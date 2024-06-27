@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/ktsivkov/ltd-he/pkg/player"
@@ -17,14 +18,18 @@ const backupTimestampFormat = "02-01-2006-150405"
 const backupFolder = "backups"
 
 func NewService(appFolder string) *Service {
-	return &Service{appFolder: appFolder}
+	return &Service{
+		appFolder: appFolder,
+		mu:        &sync.Mutex{},
+	}
 }
 
 type Service struct {
 	appFolder string
+	mu        *sync.Mutex
 }
 
-func (s *Service) backupFolder(p *player.Player) string {
+func (s *Service) BackupFolder(p *player.Player) string {
 	return filepath.Join(s.appFolder, backupFolder, p.BattleTag)
 }
 
@@ -33,7 +38,10 @@ func (s *Service) generateBackupFilename() string {
 }
 
 func (s *Service) Backup(_ context.Context, p *player.Player) (*Backup, error) {
-	backupsPath := s.backupFolder(p)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	backupsPath := s.BackupFolder(p)
 	_, err := os.Stat(backupsPath)
 	if err != nil {
 		if !os.IsNotExist(err) {

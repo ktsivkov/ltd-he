@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import {history} from "../../wailsjs/go/models";
-import {reactive} from "vue";
 import {Rollback} from "../../wailsjs/go/app/App";
 
 interface Props {
@@ -8,18 +7,6 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-
-interface Data {
-  toggled: boolean,
-}
-
-const data = reactive<Data>({
-  toggled: false
-})
-
-function toggleStats() {
-  data.toggled = !data.toggled
-}
 
 function getClassByOutcome() {
   switch (props.game.outcome){
@@ -41,7 +28,7 @@ function rollback() {
 </script>
 
 <template>
-  <tr v-on:click="toggleStats">
+  <tr v-if="props.game">
     <td class="text-center">
       <span class="badge badge rounded-pill" :class="getClassByOutcome()">{{props.game.outcome}}</span>
     </td>
@@ -58,28 +45,4 @@ function rollback() {
       <button type="button" class="btn btn-outline-success" v-if="!props.game.isLast" v-on:click="rollback">Restore</button>
     </td>
   </tr>
-<!--  <div class="modal fade" id="extended-history-{{props.game.gameId}}" tabindex="-1" aria-labelledby="label-extended-history-{{props.game.gameId}}" aria-hidden="true">-->
-<!--    <div class="modal-dialog modal-dialog modal-dialog-centered bg-transparent text-black">-->
-<!--      <div class="modal-content">-->
-<!--        <div class="modal-header">-->
-<!--          <h5 class="modal-title" id="label-extended-history-{{props.game.gameId}}">Modal title</h5>-->
-<!--          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>-->
-<!--        </div>-->
-<!--        <div class="modal-body">-->
-<!--          <div class="container">-->
-<!--            <div class="row">-->
-<!--              <div class="col-6">-->
-<!--                <label for="exampleFormControlInput1" class="form-label">Email address</label>-->
-<!--                <input type="text" class="form-control" id="exampleFormControlInput1" placeholder="name@example.com">-->
-<!--              </div>-->
-<!--              <div class="col-6"></div>-->
-<!--            </div>-->
-<!--          </div>-->
-<!--        </div>-->
-<!--        <div class="modal-footer">-->
-<!--          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>-->
-<!--        </div>-->
-<!--      </div>-->
-<!--    </div>-->
-<!--  </div>-->
 </template>

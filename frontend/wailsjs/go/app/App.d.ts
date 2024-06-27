@@ -3,6 +3,8 @@
 import {player} from '../models';
 import {history} from '../models';
 
+export function BackupFolder(arg1:player.Player):Promise<string>;
+
 export function ListPlayers():Promise<Array<player.Player>>;
 
 export function LoadHistory(arg1:player.Player):Promise<history.History>;

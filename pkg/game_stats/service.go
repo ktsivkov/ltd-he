@@ -2,9 +2,11 @@ package game_stats
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/ktsivkov/ltd-he/pkg/player"
 )
@@ -14,17 +16,30 @@ const (
 	dataTxtFile = "Data.txt"
 )
 
+var GameFileNotFoundErr error = errors.New("game file not found")
+
 func NewService() *Service {
-	return &Service{}
+	return &Service{
+		mu: &sync.Mutex{},
+	}
 }
 
-type Service struct{}
+type Service struct {
+	mu *sync.Mutex
+}
 
 func (s *Service) Load(_ context.Context, p *player.Player, gameId int) (*Stats, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	filePath := filepath.Join(p.LogsPathAbsolute, getStatsFileName(gameId))
 	payload, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", DataLoadingError, err)
+		if os.IsNotExist(err) {
+			return nil, GameFileNotFoundErr
+		}
+
+		return nil, fmt.Errorf("could not read game file: %w", err)
 	}
 
 	stats := &Stats{
@@ -33,20 +48,23 @@ func (s *Service) Load(_ context.Context, p *player.Player, gameId int) (*Stats,
 	}
 
 	if err := stats.hydrate(); err != nil {
-		return nil, stats.descriptiveError(fmt.Errorf("%w: %w", DataParsingError, err))
+		return nil, stats.descriptiveError(fmt.Errorf("could not parse game file: %w", err))
 	}
 
 	stats.GameId, err = stats.gameId()
 	if err != nil {
-		return nil, stats.descriptiveError(fmt.Errorf("%w: %w", DataParsingError, err))
+		return nil, stats.descriptiveError(fmt.Errorf("could not parse game file: %w", err))
 	}
 
 	return stats, nil
 }
 
 func (s *Service) Delete(_ context.Context, p *player.Player, gameId int) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	filePath := filepath.Join(p.LogsPathAbsolute, getStatsFileName(gameId))
-	if err := os.Remove(filePath); err != nil {
+	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("could not delete file %s: %w", filePath, err)
 	}
 

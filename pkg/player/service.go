@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sync"
 )
 
 const (
@@ -20,14 +21,19 @@ const (
 func NewService(wc3Path string) *Service {
 	return &Service{
 		wc3Path: wc3Path,
+		mu:      &sync.Mutex{},
 	}
 }
 
 type Service struct {
 	wc3Path string
+	mu      *sync.Mutex
 }
 
 func (s *Service) LoadAll(_ context.Context) ([]*Player, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	logsPathRelative := filepath.Join(customMapDataDir, logsDir)
 	logsPathAbsolute := filepath.Join(s.wc3Path, logsPathRelative)
 	items, err := os.ReadDir(logsPathAbsolute)

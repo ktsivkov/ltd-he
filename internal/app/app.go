@@ -2,10 +2,12 @@ package app
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
+
 	"github.com/ktsivkov/ltd-he/pkg/backup"
 	"github.com/ktsivkov/ltd-he/pkg/history"
 	"github.com/ktsivkov/ltd-he/pkg/player"
-	"log/slog"
 )
 
 type App struct {
@@ -53,9 +55,19 @@ func (a *App) Rollback(game *history.GameHistory) error {
 	b, err := a.backupService.Backup(a.ctx, game.Account)
 	if err != nil {
 		a.logger.Error("Could not create a backup!", "error", err)
+		EmitAlert(a.ctx, AlertError, fmt.Sprintf("Could not create a backup!\nError: %s", err))
 		return err
 	}
 	a.logger.Info("Backup successfully created!", "backup_file", b.File)
+	EmitAlert(a.ctx, AlertInfo, fmt.Sprintf("Successful backup!\nBackup location: %s", b.File))
+
+	if err := a.historyService.Rollback(a.ctx, game); err != nil {
+		a.logger.Error("Could not rollback history!", "error", err)
+		EmitAlert(a.ctx, AlertError, fmt.Sprintf("Could not rollback history!\nError: %s", err))
+		return err
+	}
+	a.logger.Info("History rollback was successful.", "rollback_target", game.GameId)
+	EmitAlert(a.ctx, AlertSuccess, fmt.Sprintf("Successful rollback!"))
 
 	return nil
 }

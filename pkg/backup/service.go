@@ -4,12 +4,13 @@ import (
 	"archive/zip"
 	"context"
 	"fmt"
-	"github.com/ktsivkov/ltd-he/pkg/player"
 	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/ktsivkov/ltd-he/pkg/player"
 )
 
 const backupTimestampFormat = "02-01-2006-150405"
@@ -27,8 +28,8 @@ func (s *Service) backupFolder(p *player.Player) string {
 	return filepath.Join(s.appFolder, backupFolder, p.BattleTag)
 }
 
-func (s *Service) generateBackupFilename(p *player.Player) string {
-	return fmt.Sprintf("%s%s", p.BattleTag, time.Now().Format(backupTimestampFormat))
+func (s *Service) generateBackupFilename() string {
+	return time.Now().Format(backupTimestampFormat)
 }
 
 func (s *Service) Backup(_ context.Context, p *player.Player) (*Backup, error) {
@@ -43,7 +44,7 @@ func (s *Service) Backup(_ context.Context, p *player.Player) (*Backup, error) {
 		}
 	}
 
-	backupFile := filepath.Join(backupsPath, fmt.Sprintf("%s.zip", s.generateBackupFilename(p)))
+	backupFile := filepath.Join(backupsPath, fmt.Sprintf("%s.zip", s.generateBackupFilename()))
 	file, err := os.Create(backupFile)
 	if err != nil {
 		return nil, fmt.Errorf("could not create backup archive: %w", err)

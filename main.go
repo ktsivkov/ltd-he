@@ -2,14 +2,17 @@ package main
 
 import (
 	"embed"
+	"fmt"
+	"log"
+	"log/slog"
+	"os"
+	"path/filepath"
+
 	"github.com/ktsivkov/ltd-he/pkg/backup"
 	"github.com/ktsivkov/ltd-he/pkg/game_stats"
 	"github.com/ktsivkov/ltd-he/pkg/history"
 	"github.com/ktsivkov/ltd-he/pkg/player"
 	"github.com/ktsivkov/ltd-he/pkg/report"
-	"log/slog"
-	"os"
-	"path/filepath"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -23,20 +26,35 @@ var assets embed.FS
 
 const DocumentsDir = "Documents"
 const Wc3Dir = "Warcraft III"
-const AppDir = "ltd-he"
+const AppDir = "LegionTD History Editor"
+const LogFile = "runtime.log"
 
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		logger.Error("Could not determine user home directory!", "error", err)
-		os.Exit(1)
+		log.Fatal("Could not determine user home directory!", "error", err)
 	}
 
 	documentsPath := filepath.Join(homeDir, DocumentsDir)
 	wc3Path := filepath.Join(documentsPath, Wc3Dir)
 	appPath := filepath.Join(documentsPath, AppDir)
+
+	if _, err := os.Stat(appPath); err != nil {
+		if !os.IsNotExist(err) {
+			log.Fatal("Could not determine user home directory!", "error", err)
+		}
+		if err := os.MkdirAll(appPath, os.ModePerm); err != nil {
+			log.Fatal("Could not determine user home directory!", "error", err)
+		}
+	}
+
+	logFile, err := os.OpenFile(filepath.Join(appPath, LogFile), os.O_APPEND|os.O_CREATE|os.O_WRONLY, os.ModePerm)
+	if err != nil {
+		fmt.Printf("Error opening file: %v\n", err)
+		return
+	}
+	defer logFile.Close()
+	logger := slog.New(slog.NewJSONHandler(logFile, nil))
 
 	playerService := player.NewService(wc3Path)
 	reportService := report.NewService()

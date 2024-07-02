@@ -17,9 +17,11 @@ const (
 	OutcomeLoss  Outcome = "LOSS"
 	OutcomeDraw  Outcome = "DRAW"
 
-	statsFilePrefix         = "DataBU"
-	statsFileSuffix         = ".pld"
-	statsFilePattern        = `DataBU(\d+).pld`
+	statsFilePrefix  = "DataBU"
+	statsFileSuffix  = ".pld"
+	statsFilePattern = `DataBU(\d+).pld`
+
+	// Payload Patterns
 	totalGamesPattern       = `Total Games: (\d+)`
 	winsPattern             = `Wins: (\d+)`
 	eloPattern              = `ELO: (\d+)`
@@ -31,6 +33,18 @@ const (
 	playerPattern           = `Player: (\w+#\d+)`
 	tokenPattern            = `BlzSetAbilityTooltip\('A017', "([^"]+)", 0\)`
 	timestampPattern        = `Time Stamp: (\d{1,2})\/(\d{1,2})\/(\d{4}) - (\d{1,2}):(\d{1,2}):(\d{1,2})`
+	// Payload Formats
+	totalGamesFormat       = "Total Games: %d"
+	winsFormat             = "Wins: %d"
+	eloFormat              = "ELO: %d"
+	totalLosesFormat       = "Total Losses: %d"
+	gamesLeftEarlyFormat   = "Games Left early: %d"
+	winsStreakFormat       = "Wins Streak: %d"
+	highestWinStreakFormat = "Highest Win Streak: %d"
+	mvpFormat              = "MVP: %d"
+	playerFormat           = "Player: %s"
+	tokenFormat            = `BlzSetAbilityTooltip('A017', "%s", 0)`
+	timestampFormat        = "Time Stamp: %d/%d/%d - %d:%d:%d"
 
 	defaultElo = 1500
 )
@@ -120,6 +134,20 @@ func (s *Stats) hydrate() error {
 	}
 
 	return nil
+}
+
+func (s *Stats) payloadUpdate() {
+	s.Payload = regexp.MustCompile(totalGamesPattern).ReplaceAll(s.Payload, []byte(fmt.Sprintf(totalGamesFormat, s.TotalGames)))
+	s.Payload = regexp.MustCompile(winsPattern).ReplaceAll(s.Payload, []byte(fmt.Sprintf(winsFormat, s.Wins)))
+	s.Payload = regexp.MustCompile(eloPattern).ReplaceAll(s.Payload, []byte(fmt.Sprintf(eloFormat, s.Elo)))
+	s.Payload = regexp.MustCompile(totalLosesPattern).ReplaceAll(s.Payload, []byte(fmt.Sprintf(totalLosesFormat, s.TotalLosses)))
+	s.Payload = regexp.MustCompile(gamesLeftEarlyPattern).ReplaceAll(s.Payload, []byte(fmt.Sprintf(gamesLeftEarlyFormat, s.GamesLeftEarly)))
+	s.Payload = regexp.MustCompile(winsStreakPattern).ReplaceAll(s.Payload, []byte(fmt.Sprintf(winsStreakFormat, s.WinsStreak)))
+	s.Payload = regexp.MustCompile(highestWinStreakPattern).ReplaceAll(s.Payload, []byte(fmt.Sprintf(highestWinStreakFormat, s.HighestWinStreak)))
+	s.Payload = regexp.MustCompile(mvpPattern).ReplaceAll(s.Payload, []byte(fmt.Sprintf(mvpFormat, s.Mvp)))
+	s.Payload = regexp.MustCompile(playerPattern).ReplaceAll(s.Payload, []byte(fmt.Sprintf(playerFormat, s.Player)))
+	s.Payload = regexp.MustCompile(tokenPattern).ReplaceAll(s.Payload, []byte(fmt.Sprintf(tokenFormat, s.Token)))
+	s.Payload = regexp.MustCompile(timestampPattern).ReplaceAll(s.Payload, []byte(fmt.Sprintf(timestampFormat, s.Timestamp.Month(), s.Timestamp.Day(), s.Timestamp.Year(), s.Timestamp.Hour(), s.Timestamp.Minute(), s.Timestamp.Second())))
 }
 
 func (s *Stats) descriptiveError(err error) error {

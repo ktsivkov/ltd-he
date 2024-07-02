@@ -65,7 +65,7 @@ func (s *Service) Load(_ context.Context, p *player.Player) (*Report, error) {
 	return report, nil
 }
 
-func (s *Service) Rollback(_ context.Context, p *player.Player, report *Report, gameId int, token string) error {
+func (s *Service) Update(_ context.Context, p *player.Player, report *Report, gameId int, token string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

@@ -4,24 +4,28 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/ktsivkov/ltd-he/pkg/game_stats"
 	"github.com/ktsivkov/ltd-he/pkg/player"
 	"github.com/ktsivkov/ltd-he/pkg/report"
+	"github.com/ktsivkov/ltd-he/pkg/token"
 )
 
 const dateFormat string = "02-01-2006 15:04:05"
 
-func NewService(reportService *report.Service, gameStatsService *game_stats.Service) *Service {
+func NewService(reportService *report.Service, gameStatsService *game_stats.Service, tokenService *token.Service) *Service {
 	return &Service{
 		reportService:    reportService,
 		gameStatsService: gameStatsService,
+		tokenService:     tokenService,
 	}
 }
 
 type Service struct {
 	reportService    *report.Service
 	gameStatsService *game_stats.Service
+	tokenService     *token.Service
 }
 
 func (s *Service) Load(ctx context.Context, p *player.Player) (History, error) {
@@ -66,10 +70,10 @@ func (s *Service) Rollback(ctx context.Context, game *GameHistory) error {
 	}
 
 	if game.GameId >= r.LastGameId {
-		return fmt.Errorf("could rollback: target_game_id %d >= last_game_id %d", game.GameId, r.LastGameId)
+		return fmt.Errorf("could not rollback: target_game_id %d >= last_game_id %d", game.GameId, r.LastGameId)
 	}
 
-	if err := s.reportService.Rollback(ctx, game.Account, r, game.GameId, game.Token); err != nil {
+	if err := s.reportService.Update(ctx, game.Account, r, game.GameId, game.Token); err != nil {
 		return fmt.Errorf("could not rollback report: %w", err)
 	}
 
@@ -81,6 +85,55 @@ func (s *Service) Rollback(ctx context.Context, game *GameHistory) error {
 		if err := s.gameStatsService.Delete(ctx, game.Account, i); err != nil {
 			return fmt.Errorf("could not delete game stats: %w", err)
 		}
+	}
+
+	return nil
+}
+
+func (s *Service) Insert(ctx context.Context, p *player.Player, req *InsertRequest) error {
+	r, err := s.reportService.Load(ctx, p)
+	if err != nil {
+		return fmt.Errorf("could not load report: %w", err)
+	}
+
+	lastGame, err := s.gameStatsService.Load(ctx, p, r.LastGameId)
+	if err != nil {
+		return fmt.Errorf("could not load last game: %w", err)
+	}
+
+	if lastGame.Elo == req.Elo {
+		return fmt.Errorf("cannot create game with the same elo as the last one")
+	}
+
+	gameId := r.LastGameId + 1
+	totalGames := lastGame.TotalGames + 1
+	wins := lastGame.Wins
+	winsStreak := 0
+	highestWinStreak := lastGame.HighestWinStreak
+	totalLosses := lastGame.TotalLosses + 1
+	gamesLeftEarly := lastGame.GamesLeftEarly
+	wasWin := false
+	if req.Elo > lastGame.Elo {
+		wasWin = true
+		totalLosses = lastGame.TotalLosses
+		wins++
+		winsStreak = lastGame.WinsStreak + 1
+		if winsStreak > highestWinStreak {
+			highestWinStreak = winsStreak
+		}
+	}
+	mvp := lastGame.Mvp
+	if req.Mvp {
+		mvp++
+	}
+
+	t := s.tokenService.Token(p.BattleTag, lastGame.TotalGames+1, wins, req.Elo, lastGame.GamesLeftEarly, winsStreak, highestWinStreak, mvp, wasWin)
+	if err := s.gameStatsService.Insert(ctx, p, gameId, totalGames, wins, req.Elo, totalLosses, gamesLeftEarly, winsStreak, highestWinStreak, mvp, t, time.Now()); err != nil {
+		return fmt.Errorf("could not insert game stats: %w", err)
+	}
+
+	if err := s.reportService.Update(ctx, p, r, gameId, t); err != nil {
+		return fmt.Errorf("could not update report: %w", err)
 	}
 
 	return nil

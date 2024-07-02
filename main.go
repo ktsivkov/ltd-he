@@ -13,6 +13,7 @@ import (
 	"github.com/ktsivkov/ltd-he/pkg/history"
 	"github.com/ktsivkov/ltd-he/pkg/player"
 	"github.com/ktsivkov/ltd-he/pkg/report"
+	"github.com/ktsivkov/ltd-he/pkg/token"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -59,7 +60,8 @@ func main() {
 	playerService := player.NewService(wc3Path)
 	reportService := report.NewService()
 	gameStatsService := game_stats.NewService()
-	historyService := history.NewService(reportService, gameStatsService)
+	tokenService := token.NewService()
+	historyService := history.NewService(reportService, gameStatsService, tokenService)
 	backupService := backup.NewService(appPath)
 
 	appInstance := app.New(logger, playerService, historyService, backupService)

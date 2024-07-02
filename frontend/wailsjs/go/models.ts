@@ -67,6 +67,20 @@ export namespace history {
 		    return a;
 		}
 	}
+	export class InsertRequest {
+	    elo: number;
+	    mvp: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new InsertRequest(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.elo = source["elo"];
+	        this.mvp = source["mvp"];
+	    }
+	}
 
 }
 

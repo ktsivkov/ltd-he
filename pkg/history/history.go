@@ -16,8 +16,3 @@ type GameHistory struct {
 	Account *player.Player     `json:"account"`
 	*game_stats.Stats
 }
-
-type Update struct {
-	History History
-	Err     error
-}

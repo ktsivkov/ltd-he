@@ -13,8 +13,9 @@ import (
 )
 
 const (
-	dataPldFile = "Data.pld"
-	dataTxtFile = "Data.txt"
+	dataPldFile     = "Data.pld"
+	dataTxtFile     = "Data.txt"
+	statsFileFormat = "DataBU%d.pld"
 )
 
 var GameFileNotFoundErr = errors.New("game file not found")
@@ -27,6 +28,23 @@ func NewService() *Service {
 
 type Service struct {
 	mu *sync.Mutex
+}
+
+func (s *Service) NewStats(player string, totalGames int, wins int, elo int, totalLosses int, gamesLeftEarly int, winsStreak int, highestWinStreak int, mvp int, token string, timestamp time.Time, gameVersion string) *Stats {
+	return &Stats{
+		TotalGames:       totalGames,
+		Wins:             wins,
+		Elo:              elo,
+		TotalLosses:      totalLosses,
+		GamesLeftEarly:   gamesLeftEarly,
+		WinsStreak:       winsStreak,
+		HighestWinStreak: highestWinStreak,
+		Mvp:              mvp,
+		Token:            token,
+		Player:           player,
+		GameVersion:      gameVersion,
+		Timestamp:        timestamp,
+	}
 }
 
 func (s *Service) Load(_ context.Context, p *player.Player, gameId int) (*Stats, error) {
@@ -52,48 +70,33 @@ func (s *Service) Rollback(_ context.Context, p *player.Player, g *Stats) error 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if err := s.storeFile(p.LogsPathAbsolute, dataPldFile, g.Payload); err != nil {
+	payload := g.GenerateFileContents()
+	if err := s.storeFile(p, dataPldFile, payload); err != nil {
 		return err
 	}
 
-	if err := s.storeFile(p.LogsPathAbsolute, dataTxtFile, g.Payload); err != nil {
+	if err := s.storeFile(p, dataTxtFile, payload); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (s *Service) Insert(_ context.Context, p *player.Player, gameId int, totalGames int, wins int, elo int, totalLosses int, gamesLeftEarly int, winsStreak int, highestWinStreak int, mvp int, token string, timestamp time.Time) error {
+func (s *Service) Insert(_ context.Context, p *player.Player, stats *Stats) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	stats, err := s.loadFile(p, dataPldFile)
-	if err != nil {
+	payload := stats.GenerateFileContents()
+
+	if err := s.storeFile(p, getStatsFileName(stats.TotalGames), payload); err != nil {
 		return err
 	}
 
-	stats.GameId = gameId
-	stats.TotalGames = totalGames
-	stats.Wins = wins
-	stats.Elo = elo
-	stats.TotalLosses = totalLosses
-	stats.GamesLeftEarly = gamesLeftEarly
-	stats.WinsStreak = winsStreak
-	stats.HighestWinStreak = highestWinStreak
-	stats.Mvp = mvp
-	stats.Token = token
-	stats.Timestamp = timestamp
-	stats.payloadUpdate()
-
-	if err := s.storeFile(p.LogsPathAbsolute, getStatsFileName(stats.GameId), stats.Payload); err != nil {
+	if err := s.storeFile(p, dataPldFile, payload); err != nil {
 		return err
 	}
 
-	if err := s.storeFile(p.LogsPathAbsolute, dataPldFile, stats.Payload); err != nil {
-		return err
-	}
-
-	if err := s.storeFile(p.LogsPathAbsolute, dataTxtFile, stats.Payload); err != nil {
+	if err := s.storeFile(p, dataTxtFile, payload); err != nil {
 		return err
 	}
 
@@ -111,35 +114,22 @@ func (s *Service) loadFile(p *player.Player, file string) (*Stats, error) {
 		return nil, fmt.Errorf("could not read game file: %w", err)
 	}
 
-	stats := &Stats{
-		File:    fp,
-		Payload: payload,
-	}
+	stats := &Stats{}
 
-	if err := stats.hydrate(); err != nil {
-		return nil, stats.descriptiveError(fmt.Errorf("could not parse game file: %w", err))
-	}
-
-	if file == dataPldFile || file == dataTxtFile {
-		stats.GameId = stats.TotalGames
-		return stats, nil
-	}
-
-	stats.GameId, err = stats.gameId()
-	if err != nil {
+	if err := stats.ParseFileContents(payload); err != nil {
 		return nil, stats.descriptiveError(fmt.Errorf("could not parse game file: %w", err))
 	}
 
 	return stats, nil
 }
 
-func (s *Service) storeFile(path string, file string, data []byte) error {
-	if err := os.WriteFile(filepath.Join(path, file), data, os.ModePerm); err != nil {
+func (s *Service) storeFile(p *player.Player, file string, data []byte) error {
+	if err := os.WriteFile(filepath.Join(p.LogsPathAbsolute, file), data, os.ModePerm); err != nil {
 		return fmt.Errorf("could not store %s file: %w", dataPldFile, err)
 	}
 	return nil
 }
 
 func getStatsFileName(gameId int) string {
-	return fmt.Sprintf("%s%d%s", statsFilePrefix, gameId, statsFileSuffix)
+	return fmt.Sprintf(statsFileFormat, gameId)
 }

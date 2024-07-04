@@ -1,6 +1,20 @@
 package history
 
-type InsertRequest struct {
+import "time"
+
+type AppendRequest struct {
 	Elo int  `json:"elo"`
 	Mvp bool `json:"mvp"`
+}
+
+type InsertRequest struct {
+	TotalGames       int       `json:"totalGames"`
+	Wins             int       `json:"wins"`
+	Elo              int       `json:"elo"`
+	TotalLosses      int       `json:"totalLosses"`
+	GamesLeftEarly   int       `json:"gamesLeftEarly"`
+	WinsStreak       int       `json:"winsStreak"`
+	HighestWinStreak int       `json:"highestWinStreak"`
+	Mvp              int       `json:"mvp"`
+	Timestamp        time.Time `json:"timestamp"`
 }

@@ -3,7 +3,7 @@ import {reactive} from 'vue'
 import {LoadHistory, BackupFolder} from '../../wailsjs/go/app/App'
 import {history, player} from "../../wailsjs/go/models";
 import HistoryItemComponent from "./HistoryItemComponent.vue";
-import InsertGameComponent from "./InsertGameComponent.vue";
+import AppendGameComponent from "./AppendGameComponent.vue";
 
 interface Props {
   selectedPlayer: player.Player
@@ -44,7 +44,7 @@ setInterval(() => {
         </div>
       </div>
     </div>
-    <InsertGameComponent :selected-player="props.selectedPlayer"></InsertGameComponent>
+    <AppendGameComponent :selected-player="props.selectedPlayer"></AppendGameComponent>
     <div class="row">
       <table v-if="data.history" class="table table-dark table-striped table-hover m-0">
         <thead>

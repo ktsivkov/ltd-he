@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import {reactive} from 'vue'
-import {Insert} from '../../wailsjs/go/app/App'
+import {Append} from '../../wailsjs/go/app/App'
 import {history, player} from "../../wailsjs/go/models";
 
 interface Props {
@@ -10,19 +10,19 @@ interface Props {
 const props = defineProps<Props>()
 
 interface Data {
-  insertionInProgress: boolean
-  input: history.InsertRequest
+  appendingInProgress: boolean
+  input: history.AppendRequest
 }
 
 const data = reactive<Data>({
-  insertionInProgress: false,
-  input: new history.InsertRequest()
+  appendingInProgress: false,
+  input: new history.AppendRequest()
 })
 
-function insertGame() {
-  data.insertionInProgress = true
-  Insert(props.selectedPlayer, data.input).then(()=>{data.input = new history.InsertRequest()}).finally(() => {
-    data.insertionInProgress = false
+function appendGame() {
+  data.appendingInProgress = true
+  Append(props.selectedPlayer, data.input).then(()=>{data.input = new history.AppendRequest()}).finally(() => {
+    data.appendingInProgress = false
   })
 }
 
@@ -31,7 +31,7 @@ function insertGame() {
 <template>
   <div class="row">
     <div class="col-6">
-      <fieldset v-bind:disabled="data.insertionInProgress">
+      <fieldset v-bind:disabled="data.appendingInProgress">
         <form class="row gy-2 gx-3 align-items-center">
           <div class="col">
             <label class="visually-hidden" for="elo">ELO</label>
@@ -46,7 +46,7 @@ function insertGame() {
             </div>
           </div>
           <div class="col-auto">
-            <button type="submit" class="btn btn-outline-success" v-on:click="insertGame">Insert Game</button>
+            <button type="submit" class="btn btn-outline-success" v-on:click="appendGame">Append Game</button>
           </div>
         </form>
       </fieldset>

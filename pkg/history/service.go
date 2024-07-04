@@ -105,6 +105,14 @@ func (s *Service) Insert(ctx context.Context, p *player.Player, req *InsertReque
 		return fmt.Errorf("cannot create game with the same elo as the last one")
 	}
 
+	if req.Elo > 3000 {
+		return errors.New("elo > 3000 is not supported")
+	}
+
+	if req.Elo < 1000 {
+		return errors.New("elo < 1000 is not supported")
+	}
+
 	gameId := r.LastGameId + 1
 	totalGames := lastGame.TotalGames + 1
 	wins := lastGame.Wins
@@ -127,8 +135,22 @@ func (s *Service) Insert(ctx context.Context, p *player.Player, req *InsertReque
 		mvp++
 	}
 
-	t := s.tokenService.Token(p.BattleTag, lastGame.TotalGames+1, wins, req.Elo, lastGame.GamesLeftEarly, winsStreak, highestWinStreak, mvp, wasWin)
-	if err := s.gameStatsService.Insert(ctx, p, gameId, totalGames, wins, req.Elo, totalLosses, gamesLeftEarly, winsStreak, highestWinStreak, mvp, t, time.Now()); err != nil {
+	now := time.Now()
+	t, err := s.tokenService.Token(p.BattleTag, lastGame.TotalGames+1, wins, req.Elo, lastGame.GamesLeftEarly, winsStreak, highestWinStreak, mvp, now, wasWin)
+	if err != nil {
+		return fmt.Errorf("could not generate token: %w", err)
+	}
+
+	ok, err := s.tokenService.ValidateToken(p.BattleTag, t)
+	if err != nil {
+		return fmt.Errorf("could not validate generated token: %w", err)
+	}
+
+	if !ok {
+		return fmt.Errorf("could generated a valid token: %w", err)
+	}
+
+	if err := s.gameStatsService.Insert(ctx, p, gameId, totalGames, wins, req.Elo, totalLosses, gamesLeftEarly, winsStreak, highestWinStreak, mvp, t, now); err != nil {
 		return fmt.Errorf("could not insert game stats: %w", err)
 	}
 

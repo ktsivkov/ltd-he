@@ -14,11 +14,12 @@ import (
 
 const dateFormat string = "02-01-2006 15:04:05"
 
-func NewService(reportService *report.Service, gameStatsService *game_stats.Service, tokenService *token.Service) *Service {
+func NewService(reportService *report.Service, gameStatsService *game_stats.Service, tokenService *token.Service, storageDriver StorageDriver) *Service {
 	return &Service{
 		reportService:    reportService,
 		gameStatsService: gameStatsService,
 		tokenService:     tokenService,
+		storageDriver:    storageDriver,
 	}
 }
 
@@ -26,6 +27,7 @@ type Service struct {
 	reportService    *report.Service
 	gameStatsService *game_stats.Service
 	tokenService     *token.Service
+	storageDriver    StorageDriver
 }
 
 func (s *Service) Load(ctx context.Context, p *player.Player) (History, error) {
@@ -72,7 +74,7 @@ func (s *Service) Rollback(ctx context.Context, game *GameHistory) error {
 		return fmt.Errorf("could not rollback: target_game_id %d >= last_game_id %d", game.TotalGames, r.LastGameId)
 	}
 
-	if err := s.reportService.Update(ctx, game.Account, r, game.TotalGames, game.Token); err != nil {
+	if err := s.reportService.Update(ctx, game.Account, game.TotalGames, game.Token); err != nil {
 		return fmt.Errorf("could not rollback report: %w", err)
 	}
 
@@ -90,6 +92,7 @@ func (s *Service) Rollback(ctx context.Context, game *GameHistory) error {
 }
 
 func (s *Service) Insert(ctx context.Context, p *player.Player, req *InsertRequest) error {
+	// TODO: Better request validation
 	r, err := s.reportService.Load(ctx, p)
 	if err != nil {
 		return fmt.Errorf("could not load report: %w", err)
@@ -98,10 +101,6 @@ func (s *Service) Insert(ctx context.Context, p *player.Player, req *InsertReque
 	lastGame, err := s.gameStatsService.Load(ctx, p, r.LastGameId)
 	if err != nil {
 		return fmt.Errorf("could not load last game: %w", err)
-	}
-
-	if lastGame.Elo == req.Elo {
-		return fmt.Errorf("cannot create game with the same elo as the last one")
 	}
 
 	if req.Elo > 3000 {
@@ -129,11 +128,15 @@ func (s *Service) Insert(ctx context.Context, p *player.Player, req *InsertReque
 
 	stats := s.gameStatsService.NewStats(p.BattleTag, req.TotalGames, req.Wins, req.Elo, req.GamesLeftEarly, req.WinsStreak, req.HighestWinStreak, req.Mvp, t, req.Timestamp, game_stats.DefaultGameVersion)
 
+	if err := s.gameStatsService.ClearStats(ctx, p); err != nil {
+		return fmt.Errorf("could not insert game stats: %w", err)
+	}
+
 	if err := s.gameStatsService.Insert(ctx, p, stats); err != nil {
 		return fmt.Errorf("could not insert game stats: %w", err)
 	}
 
-	if err := s.reportService.Update(ctx, p, r, stats.TotalGames, t); err != nil {
+	if err := s.reportService.Update(ctx, p, stats.TotalGames, t); err != nil {
 		return fmt.Errorf("could not update report: %w", err)
 	}
 
@@ -141,6 +144,7 @@ func (s *Service) Insert(ctx context.Context, p *player.Player, req *InsertReque
 }
 
 func (s *Service) Append(ctx context.Context, p *player.Player, req *AppendRequest) error {
+	// TODO: Better request validation
 	r, err := s.reportService.Load(ctx, p)
 	if err != nil {
 		return fmt.Errorf("could not load report: %w", err)
@@ -205,7 +209,7 @@ func (s *Service) Append(ctx context.Context, p *player.Player, req *AppendReque
 		return fmt.Errorf("could not insert game stats: %w", err)
 	}
 
-	if err := s.reportService.Update(ctx, p, r, gameId, t); err != nil {
+	if err := s.reportService.Update(ctx, p, gameId, t); err != nil {
 		return fmt.Errorf("could not update report: %w", err)
 	}
 

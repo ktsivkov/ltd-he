@@ -18,16 +18,18 @@ const (
 	playerDirPattern = `(\w+#\d+)`
 )
 
-func NewService(wc3Path string) *Service {
+func NewService(wc3Path string, storageDriver StorageDriver) *Service {
 	return &Service{
-		wc3Path: wc3Path,
-		mu:      &sync.Mutex{},
+		wc3Path:       wc3Path,
+		mu:            &sync.Mutex{},
+		storageDriver: storageDriver,
 	}
 }
 
 type Service struct {
-	wc3Path string
-	mu      *sync.Mutex
+	wc3Path       string
+	mu            *sync.Mutex
+	storageDriver StorageDriver
 }
 
 func (s *Service) LoadAll(_ context.Context) ([]*Player, error) {

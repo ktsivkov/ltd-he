@@ -1,0 +1,12 @@
+function PreloadFiles takes nothing returns nothing
+
+	call PreloadStart()
+	call Preload( "Crash Report" )
+	call Preload( "")
+	call BlzSetAbilityTooltip('A017', "__GAME_ID__-__TOKEN__", 0)
+//" )
+	call PreloadEnd( 0.0 )
+
+endfunction
+
+

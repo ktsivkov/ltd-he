@@ -27,15 +27,17 @@ interface ValidationErrors {
   elo?: string
 }
 
-const averageEloPerWin = 15
-const averageEloLossPerLose = 3
+const averageEloPerWin = 7
+const averageEloLossPerLose = 7
 const averageEloPerLeave = 13
 const defaultElo = 1500
+const maxElo = 3000
+const maxSuggestedElo = 2850
+const minElo = 1000
+const minSuggestedElo = 1050
 
-const data = reactive<Data>({
-  insertionInProgress: false,
-  isFormValid: true,
-  input: new history.InsertRequest({
+const getDefaultInput = () => {
+  return new history.InsertRequest({
     totalGames: 1,
     wins: 1,
     gamesLeftEarly: 0,
@@ -43,8 +45,14 @@ const data = reactive<Data>({
     winsStreak: 1,
     mvp: 1,
     elo: defaultElo + averageEloPerWin,
-    timestamp: (new Date()).setDate((new Date()).getDate()-1)
-  }),
+    timestamp: (new Date()).toISOString(),
+  })
+}
+
+const data = reactive<Data>({
+  insertionInProgress: false,
+  isFormValid: true,
+  input: getDefaultInput(),
   errors: {
     totalGames: undefined,
     wins: undefined,
@@ -141,12 +149,12 @@ const validation = {
     data.errors.mvp = undefined;
   },
   elo: () => {
-    if (data.input.elo < 1000) {
-      data.errors.elo = `ELO cannot be less than 1000.`;
+    if (data.input.elo < minElo) {
+      data.errors.elo = `ELO cannot be less than ${minElo}.`;
       return;
     }
-    if (data.input.elo > 3000) {
-      data.errors.elo = `ELO cannot be more than 3000.`;
+    if (data.input.elo > maxElo) {
+      data.errors.elo = `ELO cannot be more than ${maxElo}.`;
       return;
     }
     data.errors.elo = undefined;
@@ -172,12 +180,30 @@ const calculateSuggestedElo = (): number => {
   const eloLostFromLeftGames = data.input.gamesLeftEarly * averageEloPerLeave
   const eloLostFromLosses = (data.input.totalGames - data.input.wins - data.input.gamesLeftEarly) * averageEloLossPerLose
 
-  return (defaultElo + eloGained) - (eloLostFromLosses + eloLostFromLeftGames)
+  let suggested = (defaultElo + eloGained) - (eloLostFromLosses + eloLostFromLeftGames)
+
+  if (suggested < minSuggestedElo) {
+    return minSuggestedElo
+  }
+
+  if (suggested > maxSuggestedElo) {
+    return maxSuggestedElo
+  }
+
+  return suggested
 }
 
 </script>
 
 <template>
+  <div class="row">
+    <div class="col">
+      <div class="alert alert-dark fade show" role="alert">
+        <h4 class="alert-heading fw-bold">Hi {{ props.selectedPlayer.battleTag }}!</h4>
+        <p class="mb-0">When using the <strong>Insert Game</strong> feature, your previous game stats will be stored in a backup, then the current history will be removed and set to your desired state.</p>
+      </div>
+    </div>
+  </div>
   <form class="row g-3" v-on:submit="insertGame">
     <div class="col-md-6">
       <label for="totalGames" class="form-label">Total Games</label>

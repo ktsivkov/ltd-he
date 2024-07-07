@@ -13,6 +13,7 @@ import (
 	"github.com/ktsivkov/ltd-he/pkg/history"
 	"github.com/ktsivkov/ltd-he/pkg/player"
 	"github.com/ktsivkov/ltd-he/pkg/report"
+	"github.com/ktsivkov/ltd-he/pkg/storage"
 	"github.com/ktsivkov/ltd-he/pkg/token"
 
 	"github.com/wailsapp/wails/v2"
@@ -57,11 +58,12 @@ func main() {
 	defer logFile.Close()
 	logger := slog.New(slog.NewJSONHandler(logFile, nil))
 
-	playerService := player.NewService(wc3Path)
-	reportService := report.NewService()
-	gameStatsService := game_stats.NewService()
+	storageDriver := storage.New()
+	playerService := player.NewService(wc3Path, storageDriver)
+	reportService := report.NewService(storageDriver)
+	gameStatsService := game_stats.NewService(storageDriver)
 	tokenService := token.NewService()
-	historyService := history.NewService(reportService, gameStatsService, tokenService)
+	historyService := history.NewService(reportService, gameStatsService, tokenService, storageDriver)
 	backupService := backup.NewService(appPath)
 
 	appInstance := app.New(logger, playerService, historyService, backupService)

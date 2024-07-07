@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -20,14 +18,16 @@ const (
 
 var GameFileNotFoundErr = errors.New("game file not found")
 
-func NewService() *Service {
+func NewService(storageDriver StorageDriver) *Service {
 	return &Service{
-		mu: &sync.Mutex{},
+		mu:            &sync.Mutex{},
+		storageDriver: storageDriver,
 	}
 }
 
 type Service struct {
-	mu *sync.Mutex
+	mu            *sync.Mutex
+	storageDriver StorageDriver
 }
 
 func (s *Service) NewStats(player string, totalGames int, wins int, elo int, gamesLeftEarly int, winsStreak int, highestWinStreak int, mvp int, token string, timestamp time.Time, gameVersion string) *Stats {
@@ -58,9 +58,8 @@ func (s *Service) Delete(_ context.Context, p *player.Player, gameId int) error 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	filePath := filepath.Join(p.LogsPathAbsolute, getStatsFileName(gameId))
-	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("could not delete file %s: %w", filePath, err)
+	if err := s.storageDriver.DeletePath(p.LogsPathAbsolute, getStatsFileName(gameId)); err != nil {
+		return fmt.Errorf("could not delete file: %w", err)
 	}
 
 	return nil
@@ -103,15 +102,22 @@ func (s *Service) Insert(_ context.Context, p *player.Player, stats *Stats) erro
 	return nil
 }
 
-func (s *Service) loadFile(p *player.Player, file string) (*Stats, error) {
-	fp := filepath.Join(p.LogsPathAbsolute, file)
-	payload, err := os.ReadFile(fp)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, GameFileNotFoundErr
-		}
+func (s *Service) ClearStats(_ context.Context, p *player.Player) error {
+	if err := s.storageDriver.DeletePath(p.LogsPathAbsolute); err != nil {
+		return fmt.Errorf("could not delete logs path: %w", err)
+	}
 
-		return nil, fmt.Errorf("could not read game file: %w", err)
+	if err := s.storageDriver.CreateDir(p.LogsPathAbsolute); err != nil {
+		return fmt.Errorf("could not create logs path: %w", err)
+	}
+
+	return nil
+}
+
+func (s *Service) loadFile(p *player.Player, file string) (*Stats, error) {
+	payload, err := s.storageDriver.ReadFile(p.LogsPathAbsolute, file)
+	if err != nil {
+		return nil, fmt.Errorf("could not read file %s: %w", file, err)
 	}
 
 	stats := &Stats{}
@@ -124,9 +130,10 @@ func (s *Service) loadFile(p *player.Player, file string) (*Stats, error) {
 }
 
 func (s *Service) storeFile(p *player.Player, file string, data []byte) error {
-	if err := os.WriteFile(filepath.Join(p.LogsPathAbsolute, file), data, os.ModePerm); err != nil {
-		return fmt.Errorf("could not store %s file: %w", dataPldFile, err)
+	if err := s.storageDriver.WriteFile(data, p.LogsPathAbsolute, file); err != nil {
+		return fmt.Errorf("could not write file: %w", err)
 	}
+
 	return nil
 }
 

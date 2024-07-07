@@ -89,11 +89,11 @@ func (s *Stats) Outcome(lastGame *Stats) Outcome {
 	if s.GamesLeftEarly > lastGame.GamesLeftEarly {
 		return OutcomeLeave
 	}
+	if s.Elo < lastGame.Elo || s.WinsStreak == 0 {
+		return OutcomeLoss
+	}
 	if s.Elo > lastGame.Elo {
 		return OutcomeWin
-	}
-	if s.Elo < lastGame.Elo {
-		return OutcomeLoss
 	}
 
 	return OutcomeDraw

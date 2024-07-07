@@ -7,6 +7,8 @@ export function Append(arg1:player.Player,arg2:history.AppendRequest):Promise<vo
 
 export function BackupFolder(arg1:player.Player):Promise<string>;
 
+export function Insert(arg1:player.Player,arg2:history.InsertRequest):Promise<void>;
+
 export function ListPlayers():Promise<Array<player.Player>>;
 
 export function LoadHistory(arg1:player.Player):Promise<history.History>;

@@ -11,7 +11,6 @@ type InsertRequest struct {
 	TotalGames       int       `json:"totalGames"`
 	Wins             int       `json:"wins"`
 	Elo              int       `json:"elo"`
-	TotalLosses      int       `json:"totalLosses"`
 	GamesLeftEarly   int       `json:"gamesLeftEarly"`
 	WinsStreak       int       `json:"winsStreak"`
 	HighestWinStreak int       `json:"highestWinStreak"`

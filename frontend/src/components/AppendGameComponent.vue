@@ -25,12 +25,11 @@ function appendGame() {
     data.appendingInProgress = false
   })
 }
-
 </script>
 
 <template>
   <div class="row">
-    <div class="col-6">
+    <div class="col-6 p-3">
       <fieldset v-bind:disabled="data.appendingInProgress">
         <form class="row gy-2 gx-3 align-items-center">
           <div class="col">

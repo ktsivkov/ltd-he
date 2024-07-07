@@ -127,7 +127,7 @@ func (s *Service) Insert(ctx context.Context, p *player.Player, req *InsertReque
 		return fmt.Errorf("could generated a valid token: %w", err)
 	}
 
-	stats := s.gameStatsService.NewStats(p.BattleTag, req.TotalGames, req.Wins, req.Elo, req.TotalLosses, req.GamesLeftEarly, req.WinsStreak, req.HighestWinStreak, req.Mvp, t, req.Timestamp, game_stats.DefaultGameVersion)
+	stats := s.gameStatsService.NewStats(p.BattleTag, req.TotalGames, req.Wins, req.Elo, req.GamesLeftEarly, req.WinsStreak, req.HighestWinStreak, req.Mvp, t, req.Timestamp, game_stats.DefaultGameVersion)
 
 	if err := s.gameStatsService.Insert(ctx, p, stats); err != nil {
 		return fmt.Errorf("could not insert game stats: %w", err)
@@ -168,13 +168,11 @@ func (s *Service) Append(ctx context.Context, p *player.Player, req *AppendReque
 	wins := lastGame.Wins
 	winsStreak := 0
 	highestWinStreak := lastGame.HighestWinStreak
-	totalLosses := lastGame.TotalLosses + 1
 	gamesLeftEarly := lastGame.GamesLeftEarly
 	gameVersion := lastGame.GameVersion
 	wasWin := false
 	if req.Elo > lastGame.Elo {
 		wasWin = true
-		totalLosses = lastGame.TotalLosses
 		wins++
 		winsStreak = lastGame.WinsStreak + 1
 		if winsStreak > highestWinStreak {
@@ -201,7 +199,7 @@ func (s *Service) Append(ctx context.Context, p *player.Player, req *AppendReque
 		return fmt.Errorf("could generated a valid token: %w", err)
 	}
 
-	stats := s.gameStatsService.NewStats(p.BattleTag, totalGames, wins, req.Elo, totalLosses, gamesLeftEarly, winsStreak, highestWinStreak, mvp, t, now, gameVersion)
+	stats := s.gameStatsService.NewStats(p.BattleTag, totalGames, wins, req.Elo, gamesLeftEarly, winsStreak, highestWinStreak, mvp, t, now, gameVersion)
 
 	if err := s.gameStatsService.Insert(ctx, p, stats); err != nil {
 		return fmt.Errorf("could not insert game stats: %w", err)

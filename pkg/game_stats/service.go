@@ -30,12 +30,12 @@ type Service struct {
 	mu *sync.Mutex
 }
 
-func (s *Service) NewStats(player string, totalGames int, wins int, elo int, totalLosses int, gamesLeftEarly int, winsStreak int, highestWinStreak int, mvp int, token string, timestamp time.Time, gameVersion string) *Stats {
+func (s *Service) NewStats(player string, totalGames int, wins int, elo int, gamesLeftEarly int, winsStreak int, highestWinStreak int, mvp int, token string, timestamp time.Time, gameVersion string) *Stats {
 	return &Stats{
 		TotalGames:       totalGames,
 		Wins:             wins,
 		Elo:              elo,
-		TotalLosses:      totalLosses,
+		TotalLosses:      totalGames - wins - gamesLeftEarly,
 		GamesLeftEarly:   gamesLeftEarly,
 		WinsStreak:       winsStreak,
 		HighestWinStreak: highestWinStreak,

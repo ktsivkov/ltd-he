@@ -95,6 +95,27 @@ func (a *App) Append(p *player.Player, req *history.AppendRequest) error {
 	return nil
 }
 
+func (a *App) Insert(p *player.Player, req *history.InsertRequest) error {
+	b, err := a.backupService.Backup(a.ctx, p)
+	if err != nil {
+		a.logger.Error("Could not create a backup!", "error", err)
+		EmitAlert(a.ctx, AlertError, fmt.Sprintf("Could not create a backup!\nError: %s", err))
+		return err
+	}
+	a.logger.Info("Backup successfully created!", "backup_file", b.File)
+	EmitAlert(a.ctx, AlertInfo, fmt.Sprintf("Successful backup!\nBackup location: %s", b.File))
+
+	if err := a.historyService.Insert(a.ctx, p, req); err != nil {
+		a.logger.Error("Could not append game!", "error", err)
+		EmitAlert(a.ctx, AlertError, fmt.Sprintf("Could not append game!\nError: %s", err))
+		return err
+	}
+	a.logger.Info("Game was appended successfully.", "insert_request", req, "target_player", p)
+	EmitAlert(a.ctx, AlertSuccess, fmt.Sprintf("Successful game insertion!"))
+
+	return nil
+}
+
 func (a *App) BackupFolder(p *player.Player) string {
 	return a.backupService.BackupFolder(p)
 }

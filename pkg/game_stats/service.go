@@ -115,9 +115,18 @@ func (s *Service) ClearStats(_ context.Context, p *player.Player) error {
 }
 
 func (s *Service) loadFile(p *player.Player, file string) (*Stats, error) {
+	ok, err := s.storageDriver.Exists(p.LogsPathAbsolute, file)
+	if err != nil {
+		return nil, fmt.Errorf("could not check file existance file: %w", err)
+	}
+
+	if !ok {
+		return nil, GameFileNotFoundErr
+	}
+
 	payload, err := s.storageDriver.ReadFile(p.LogsPathAbsolute, file)
 	if err != nil {
-		return nil, fmt.Errorf("could not read file %s: %w", file, err)
+		return nil, fmt.Errorf("could not read file: %w", err)
 	}
 
 	stats := &Stats{}

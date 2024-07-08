@@ -16,8 +16,6 @@ function getClassByOutcome() {
       return "bg-danger"
     case "LEAVE":
       return "bg-warning"
-    case "DRAW":
-      return "bg-secondary"
   }
 }
 

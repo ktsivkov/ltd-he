@@ -92,27 +92,12 @@ func (s *Service) Rollback(ctx context.Context, game *GameHistory) error {
 }
 
 func (s *Service) Insert(ctx context.Context, p *player.Player, req *InsertRequest) error {
-	// TODO: Better request validation
-	r, err := s.reportService.Load(ctx, p)
-	if err != nil {
-		return fmt.Errorf("could not load report: %w", err)
+
+	if err := req.Validate(); err != nil {
+		return fmt.Errorf("could not validate request: %w", err)
 	}
 
-	lastGame, err := s.gameStatsService.Load(ctx, p, r.LastGameId)
-	if err != nil {
-		return fmt.Errorf("could not load last game: %w", err)
-	}
-
-	if req.Elo > 3000 {
-		return errors.New("elo > 3000 is not supported")
-	}
-
-	if req.Elo < 1000 {
-		return errors.New("elo < 1000 is not supported")
-	}
-
-	now := time.Now()
-	t, err := s.tokenService.Token(p.BattleTag, lastGame.TotalGames+1, req.Wins, req.Elo, lastGame.GamesLeftEarly, req.WinsStreak, req.HighestWinStreak, req.Mvp, now, req.WinsStreak <= 1)
+	t, err := s.tokenService.Token(p.BattleTag, req.TotalGames, req.Wins, req.Elo, req.GamesLeftEarly, req.WinsStreak, req.HighestWinStreak, req.Mvp, req.Timestamp, req.WinsStreak <= 1)
 	if err != nil {
 		return fmt.Errorf("could not generate token: %w", err)
 	}
@@ -144,7 +129,6 @@ func (s *Service) Insert(ctx context.Context, p *player.Player, req *InsertReque
 }
 
 func (s *Service) Append(ctx context.Context, p *player.Player, req *AppendRequest) error {
-	// TODO: Better request validation
 	r, err := s.reportService.Load(ctx, p)
 	if err != nil {
 		return fmt.Errorf("could not load report: %w", err)
@@ -155,16 +139,8 @@ func (s *Service) Append(ctx context.Context, p *player.Player, req *AppendReque
 		return fmt.Errorf("could not load last game: %w", err)
 	}
 
-	if lastGame.Elo == req.Elo {
-		return fmt.Errorf("cannot create game with the same elo as the last one")
-	}
-
-	if req.Elo > 3000 {
-		return errors.New("elo > 3000 is not supported")
-	}
-
-	if req.Elo < 1000 {
-		return errors.New("elo < 1000 is not supported")
+	if err := req.Validate(lastGame.Elo); err != nil {
+		return fmt.Errorf("could not validate request: %w", err)
 	}
 
 	gameId := r.LastGameId + 1

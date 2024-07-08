@@ -124,11 +124,11 @@ func (a *App) Insert(p *player.Player, req *history.InsertRequest) error {
 	EmitAlert(a.ctx, AlertInfo, fmt.Sprintf("Successful backup!\nBackup location: %s", b.File))
 
 	if err := a.historyService.Insert(a.ctx, p, req); err != nil {
-		a.logger.Error("Could not append game!", "error", err)
-		EmitAlert(a.ctx, AlertError, fmt.Sprintf("Could not append game!\nError: %s", err))
+		a.logger.Error("Could not insert game!", "error", err)
+		EmitAlert(a.ctx, AlertError, fmt.Sprintf("Could not insert game!\nError: %s", err))
 		return err
 	}
-	a.logger.Info("Game was appended successfully.", "insert_request", req, "target_player", p)
+	a.logger.Info("Game was inserted successfully.", "insert_request", req, "target_player", p)
 	EmitAlert(a.ctx, AlertSuccess, fmt.Sprintf("Successful game insertion!"))
 
 	return nil

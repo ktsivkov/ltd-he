@@ -20,7 +20,10 @@ const (
 	OutcomeLeave Outcome = "LEAVE"
 	OutcomeWin   Outcome = "WIN"
 	OutcomeLoss  Outcome = "LOSS"
-	OutcomeDraw  Outcome = "DRAW"
+
+	DefaultGameVersion = "11.0g"
+	MinElo             = 1000
+	MaxElo             = 3000
 
 	// payload Patterns
 	totalGamesPattern       = `Total Games: (\d+)`
@@ -62,8 +65,7 @@ const (
 	gameVersionHolder      = "__GAME_VERSION__"
 	tokenHolder            = "__TOKEN__"
 
-	defaultElo         = 1500
-	DefaultGameVersion = "11.0g"
+	defaultElo = 1500
 )
 
 type Stats struct {
@@ -86,17 +88,15 @@ func (s *Stats) Outcome(lastGame *Stats) Outcome {
 		lastGame = getDefaultGameStats()
 	}
 
-	if s.GamesLeftEarly > lastGame.GamesLeftEarly {
+	if s.WinsStreak == 0 && s.GamesLeftEarly > lastGame.GamesLeftEarly {
 		return OutcomeLeave
 	}
-	if s.Elo < lastGame.Elo || s.WinsStreak == 0 {
+
+	if s.WinsStreak == 0 {
 		return OutcomeLoss
 	}
-	if s.Elo > lastGame.Elo {
-		return OutcomeWin
-	}
 
-	return OutcomeDraw
+	return OutcomeWin
 }
 
 func (s *Stats) EloDiff(lastGame *Stats) int {

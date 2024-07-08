@@ -120,17 +120,26 @@ const validation = {
     data.errors.gamesLeftEarly = undefined;
   },
   highestWinStreak: () => {
+    if (data.input.highestWinStreak < 0) {
+      data.errors.mvp = `Highest Wins Streak cannot be less than 0.`;
+      return;
+    }
     if (data.input.highestWinStreak > data.input.wins) {
-      data.errors.highestWinStreak = `Highest Wins Streak cannot be higher than ${data.input.wins} Wins.`;
+      data.errors.highestWinStreak = `Highest Win Streak cannot be higher than ${data.input.wins} Wins.`;
       return;
     }
     if (data.input.highestWinStreak != data.input.winsStreak && data.input.highestWinStreak > data.input.wins - data.input.winsStreak) {
-      data.errors.highestWinStreak = `Highest Wins Streak should be ${data.input.winsStreak}, or not higher than ${data.input.wins - data.input.winsStreak} Wins - Current Wins Streak.`;
+      data.errors.highestWinStreak = `Highest Win Streak should be ${data.input.winsStreak}, or not higher than ${data.input.wins - data.input.winsStreak} Wins - Current Wins Streak.`;
       return;
     }
     data.errors.highestWinStreak = undefined;
   },
   winsStreak: () => {
+    if (data.input.winsStreak < 0) {
+      data.errors.mvp = `Current Wins Streak cannot be less than 0.`;
+      return;
+    }
+
     if (data.input.winsStreak > data.input.wins) {
       data.errors.winsStreak = `Current Wins Streak cannot be higher than ${data.input.wins} Wins.`;
       return;
@@ -142,6 +151,10 @@ const validation = {
     data.errors.winsStreak = undefined;
   },
   mvp: () => {
+    if (data.input.mvp < 0) {
+      data.errors.mvp = `MVP cannot be less than 0.`;
+      return;
+    }
     if (data.input.mvp > data.input.totalGames - data.input.gamesLeftEarly) {
       data.errors.mvp = `MVP cannot be higher than ${data.input.totalGames - data.input.gamesLeftEarly} Total Games - Games Left Early.`;
       return;
@@ -170,7 +183,7 @@ const insertGame = (event: Event) => {
 
   data.insertionInProgress = true
   Insert(props.selectedPlayer, data.input).then(() => {
-    data.input = new history.InsertRequest()
+    data.input = getDefaultInput()
   }).finally(() => {
     data.insertionInProgress = false
   })
@@ -281,7 +294,7 @@ const calculateSuggestedElo = (): number => {
       </div>
     </div>
     <div class="col-md-6">
-      <label for="timestamp" class="form-label">Date <span class="text-secondary fw-bold">(Month/Day/Year, Hour:Minute)</span></label>
+      <label for="timestamp" class="form-label">Timestamp <span class="text-secondary fw-bold">(Month/Day/Year, Hour:Minute)</span></label>
       <VueDatePicker
           v-model="data.input.timestamp" :clearable="false"
           :min-date="(new Date()).setFullYear((new Date()).getFullYear()-1)"

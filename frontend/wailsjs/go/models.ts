@@ -1,13 +1,25 @@
 export namespace history {
 	
+	export class AppendRequest {
+	    elo: number;
+	    mvp: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new AppendRequest(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.elo = source["elo"];
+	        this.mvp = source["mvp"];
+	    }
+	}
 	export class GameHistory {
 	    outcome: string;
 	    eloDiff: number;
 	    date: string;
-	    gameId: number;
 	    isLast: boolean;
 	    account?: player.Player;
-	    file: string;
 	    totalGames: number;
 	    wins: number;
 	    elo: number;
@@ -18,9 +30,9 @@ export namespace history {
 	    mvp: number;
 	    token: string;
 	    player: string;
+	    gameVersion: string;
 	    // Go type: time
 	    timestamp: any;
-	    payload: number[];
 	
 	    static createFrom(source: any = {}) {
 	        return new GameHistory(source);
@@ -31,10 +43,8 @@ export namespace history {
 	        this.outcome = source["outcome"];
 	        this.eloDiff = source["eloDiff"];
 	        this.date = source["date"];
-	        this.gameId = source["gameId"];
 	        this.isLast = source["isLast"];
 	        this.account = this.convertValues(source["account"], player.Player);
-	        this.file = source["file"];
 	        this.totalGames = source["totalGames"];
 	        this.wins = source["wins"];
 	        this.elo = source["elo"];
@@ -45,8 +55,53 @@ export namespace history {
 	        this.mvp = source["mvp"];
 	        this.token = source["token"];
 	        this.player = source["player"];
+	        this.gameVersion = source["gameVersion"];
 	        this.timestamp = this.convertValues(source["timestamp"], null);
-	        this.payload = source["payload"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class InsertRequest {
+	    totalGames: number;
+	    wins: number;
+	    elo: number;
+	    gamesLeftEarly: number;
+	    winsStreak: number;
+	    highestWinStreak: number;
+	    mvp: number;
+	    // Go type: time
+	    timestamp: any;
+	
+	    static createFrom(source: any = {}) {
+	        return new InsertRequest(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.totalGames = source["totalGames"];
+	        this.wins = source["wins"];
+	        this.elo = source["elo"];
+	        this.gamesLeftEarly = source["gamesLeftEarly"];
+	        this.winsStreak = source["winsStreak"];
+	        this.highestWinStreak = source["highestWinStreak"];
+	        this.mvp = source["mvp"];
+	        this.timestamp = this.convertValues(source["timestamp"], null);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

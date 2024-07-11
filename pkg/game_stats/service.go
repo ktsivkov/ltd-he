@@ -4,92 +4,148 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/ktsivkov/ltd-he/pkg/player"
 )
 
 const (
-	dataPldFile = "Data.pld"
-	dataTxtFile = "Data.txt"
+	dataPldFile     = "Data.pld"
+	dataTxtFile     = "Data.txt"
+	statsFileFormat = "DataBU%d.pld"
 )
 
-var GameFileNotFoundErr error = errors.New("game file not found")
+var GameFileNotFoundErr = errors.New("game file not found")
 
-func NewService() *Service {
+func NewService(storageDriver StorageDriver) *Service {
 	return &Service{
-		mu: &sync.Mutex{},
+		mu:            &sync.Mutex{},
+		storageDriver: storageDriver,
 	}
 }
 
 type Service struct {
-	mu *sync.Mutex
+	mu            *sync.Mutex
+	storageDriver StorageDriver
+}
+
+func (s *Service) NewStats(player string, totalGames int, wins int, elo int, gamesLeftEarly int, winsStreak int, highestWinStreak int, mvp int, token string, timestamp time.Time, gameVersion string) *Stats {
+	return &Stats{
+		TotalGames:       totalGames,
+		Wins:             wins,
+		Elo:              elo,
+		TotalLosses:      totalGames - wins - gamesLeftEarly,
+		GamesLeftEarly:   gamesLeftEarly,
+		WinsStreak:       winsStreak,
+		HighestWinStreak: highestWinStreak,
+		Mvp:              mvp,
+		Token:            token,
+		Player:           player,
+		GameVersion:      gameVersion,
+		Timestamp:        timestamp,
+	}
 }
 
 func (s *Service) Load(_ context.Context, p *player.Player, gameId int) (*Stats, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	filePath := filepath.Join(p.LogsPathAbsolute, getStatsFileName(gameId))
-	payload, err := os.ReadFile(filePath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, GameFileNotFoundErr
-		}
-
-		return nil, fmt.Errorf("could not read game file: %w", err)
-	}
-
-	stats := &Stats{
-		File:    filePath,
-		Payload: payload,
-	}
-
-	if err := stats.hydrate(); err != nil {
-		return nil, stats.descriptiveError(fmt.Errorf("could not parse game file: %w", err))
-	}
-
-	stats.GameId, err = stats.gameId()
-	if err != nil {
-		return nil, stats.descriptiveError(fmt.Errorf("could not parse game file: %w", err))
-	}
-
-	return stats, nil
+	return s.loadFile(p, getStatsFileName(gameId))
 }
 
 func (s *Service) Delete(_ context.Context, p *player.Player, gameId int) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	filePath := filepath.Join(p.LogsPathAbsolute, getStatsFileName(gameId))
-	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("could not delete file %s: %w", filePath, err)
+	if err := s.storageDriver.DeletePath(p.LogsPathAbsolute, getStatsFileName(gameId)); err != nil {
+		return fmt.Errorf("could not delete file: %w", err)
 	}
 
 	return nil
 }
 
 func (s *Service) Rollback(_ context.Context, p *player.Player, g *Stats) error {
-	if err := s.rollbackFile(p.LogsPathAbsolute, dataPldFile, g.Payload); err != nil {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	payload := g.GenerateFileContents()
+	if err := s.storeFile(p, dataPldFile, payload); err != nil {
 		return err
 	}
 
-	if err := s.rollbackFile(p.LogsPathAbsolute, dataTxtFile, g.Payload); err != nil {
+	if err := s.storeFile(p, dataTxtFile, payload); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (s *Service) rollbackFile(path string, file string, data []byte) error {
-	if err := os.WriteFile(filepath.Join(path, file), data, os.ModePerm); err != nil {
-		return fmt.Errorf("could not rollback %s file: %w", dataPldFile, err)
+func (s *Service) Insert(_ context.Context, p *player.Player, stats *Stats) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	payload := stats.GenerateFileContents()
+
+	if err := s.storeFile(p, getStatsFileName(stats.TotalGames), payload); err != nil {
+		return err
 	}
+
+	if err := s.storeFile(p, dataPldFile, payload); err != nil {
+		return err
+	}
+
+	if err := s.storeFile(p, dataTxtFile, payload); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func getStatsFileName(lastGameId int) string {
-	return fmt.Sprintf("%s%d%s", statsFilePrefix, lastGameId, statsFileSuffix)
+func (s *Service) ClearStats(_ context.Context, p *player.Player) error {
+	if err := s.storageDriver.DeletePath(p.LogsPathAbsolute); err != nil {
+		return fmt.Errorf("could not delete logs path: %w", err)
+	}
+
+	if err := s.storageDriver.CreateDir(p.LogsPathAbsolute); err != nil {
+		return fmt.Errorf("could not create logs path: %w", err)
+	}
+
+	return nil
+}
+
+func (s *Service) loadFile(p *player.Player, file string) (*Stats, error) {
+	ok, err := s.storageDriver.Exists(p.LogsPathAbsolute, file)
+	if err != nil {
+		return nil, fmt.Errorf("could not check file existance file: %w", err)
+	}
+
+	if !ok {
+		return nil, GameFileNotFoundErr
+	}
+
+	payload, err := s.storageDriver.ReadFile(p.LogsPathAbsolute, file)
+	if err != nil {
+		return nil, fmt.Errorf("could not read file: %w", err)
+	}
+
+	stats := &Stats{}
+
+	if err := stats.ParseFileContents(payload); err != nil {
+		return nil, stats.descriptiveError(fmt.Errorf("could not parse game file: %w", err))
+	}
+
+	return stats, nil
+}
+
+func (s *Service) storeFile(p *player.Player, file string, data []byte) error {
+	if err := s.storageDriver.WriteFile(data, p.LogsPathAbsolute, file); err != nil {
+		return fmt.Errorf("could not write file: %w", err)
+	}
+
+	return nil
+}
+
+func getStatsFileName(gameId int) string {
+	return fmt.Sprintf(statsFileFormat, gameId)
 }

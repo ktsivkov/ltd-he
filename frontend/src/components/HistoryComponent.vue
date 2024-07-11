@@ -1,8 +1,9 @@
 <script lang="ts" setup>
 import {reactive} from 'vue'
-import {LoadHistory, BackupFolder} from '../../wailsjs/go/app/App'
+import {LoadHistory} from '../../wailsjs/go/app/App'
 import {history, player} from "../../wailsjs/go/models";
 import HistoryItemComponent from "./HistoryItemComponent.vue";
+import AppendGameComponent from "./AppendGameComponent.vue";
 
 interface Props {
   selectedPlayer: player.Player
@@ -11,15 +12,12 @@ interface Props {
 const props = defineProps<Props>()
 
 interface Data {
-  history: Array<history.GameHistory>,
-  backupFolder?: string,
+  history: Array<history.GameHistory>
 }
 
 const data = reactive<Data>({
-  history: [],
+  history: []
 })
-
-BackupFolder(props.selectedPlayer).then(result => data.backupFolder=result)
 
 setInterval(() => {
   LoadHistory(props.selectedPlayer).then(result => {
@@ -30,21 +28,10 @@ setInterval(() => {
 </script>
 
 <template>
-  <div class="container-fluid">
-    <div class="row" v-if="data.backupFolder">
-      <div class="col">
-        <div class="alert alert-dark fade show" role="alert">
-          <h4 class="alert-heading fw-bold">Hi {{props.selectedPlayer.battleTag}}!</h4>
-          <p class="mb-0">This application will let you restore your game history to any checkpoint you would want to.</p>
-          <p class="mb-0">Upon restoring the application will automatically create backups of your history before executing any operations.</p>
-          <p>in case of an error you can restore.</p>
-          <hr>
-          <p class="mb-0"><strong>The backup location for your account is:</strong><br /><u>{{data.backupFolder}}</u></p>
-        </div>
-      </div>
-    </div>
-    <div class="row">
-      <table v-if="data.history" class="table table-dark table-striped table-hover m-0">
+  <AppendGameComponent :selected-player="props.selectedPlayer"></AppendGameComponent>
+  <div class="row" v-if="data.history">
+    <div class="col">
+      <table class="table table-dark table-striped table-hover m-0">
         <thead>
         <tr>
           <td class="text-center">Outcome</td>

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 
 	"github.com/ktsivkov/ltd-he/pkg/backup"
 	"github.com/ktsivkov/ltd-he/pkg/history"
@@ -16,6 +17,7 @@ type App struct {
 	playerService  *player.Service
 	historyService *history.Service
 	backupService  *backup.Service
+	mu             *sync.Mutex
 }
 
 func New(logger *slog.Logger, playerService *player.Service, historyService *history.Service, backupService *backup.Service) *App {
@@ -24,6 +26,7 @@ func New(logger *slog.Logger, playerService *player.Service, historyService *his
 		playerService:  playerService,
 		historyService: historyService,
 		backupService:  backupService,
+		mu:             &sync.Mutex{},
 	}
 }
 
@@ -32,6 +35,9 @@ func (a *App) OnStartup(ctx context.Context) {
 }
 
 func (a *App) ListPlayers() ([]*player.Player, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
 	players, err := a.playerService.LoadAll(a.ctx)
 	if err != nil {
 		a.logger.Error("Could not list all players!", "error", err)
@@ -43,6 +49,9 @@ func (a *App) ListPlayers() ([]*player.Player, error) {
 }
 
 func (a *App) LoadHistory(p *player.Player) (history.History, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
 	playerHistory, err := a.historyService.Load(a.ctx, p)
 	if err != nil {
 		a.logger.Error("Could not load player history!", "error", err)
@@ -54,6 +63,9 @@ func (a *App) LoadHistory(p *player.Player) (history.History, error) {
 }
 
 func (a *App) Rollback(game *history.GameHistory) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
 	b, err := a.backupService.Backup(a.ctx, game.Account)
 	if err != nil {
 		a.logger.Error("Could not create a backup!", "error", err)
@@ -68,8 +80,56 @@ func (a *App) Rollback(game *history.GameHistory) error {
 		EmitAlert(a.ctx, AlertError, fmt.Sprintf("Could not rollback history!\nError: %s", err))
 		return err
 	}
-	a.logger.Info("History rollback was successful.", "rollback_target", game.GameId)
+	a.logger.Info("History rollback was successful.", "rollback_target", game.TotalGames)
 	EmitAlert(a.ctx, AlertSuccess, fmt.Sprintf("Successful rollback!"))
+
+	return nil
+}
+
+func (a *App) Append(p *player.Player, req *history.AppendRequest) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	b, err := a.backupService.Backup(a.ctx, p)
+	if err != nil {
+		a.logger.Error("Could not create a backup!", "error", err)
+		EmitAlert(a.ctx, AlertError, fmt.Sprintf("Could not create a backup!\nError: %s", err))
+		return err
+	}
+	a.logger.Info("Backup successfully created!", "backup_file", b.File)
+	EmitAlert(a.ctx, AlertInfo, fmt.Sprintf("Successful backup!\nBackup location: %s", b.File))
+
+	if err := a.historyService.Append(a.ctx, p, req); err != nil {
+		a.logger.Error("Could not append game!", "error", err)
+		EmitAlert(a.ctx, AlertError, fmt.Sprintf("Could not append game!\nError: %s", err))
+		return err
+	}
+	a.logger.Info("Game was appended successfully.", "insert_request", req, "target_player", p)
+	EmitAlert(a.ctx, AlertSuccess, fmt.Sprintf("Successful game insertion!"))
+
+	return nil
+}
+
+func (a *App) Insert(p *player.Player, req *history.InsertRequest) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	b, err := a.backupService.Backup(a.ctx, p)
+	if err != nil {
+		a.logger.Error("Could not create a backup!", "error", err)
+		EmitAlert(a.ctx, AlertError, fmt.Sprintf("Could not create a backup!\nError: %s", err))
+		return err
+	}
+	a.logger.Info("Backup successfully created!", "backup_file", b.File)
+	EmitAlert(a.ctx, AlertInfo, fmt.Sprintf("Successful backup!\nBackup location: %s", b.File))
+
+	if err := a.historyService.Insert(a.ctx, p, req); err != nil {
+		a.logger.Error("Could not insert game!", "error", err)
+		EmitAlert(a.ctx, AlertError, fmt.Sprintf("Could not insert game!\nError: %s", err))
+		return err
+	}
+	a.logger.Info("Game was inserted successfully.", "insert_request", req, "target_player", p)
+	EmitAlert(a.ctx, AlertSuccess, fmt.Sprintf("Successful game insertion!"))
 
 	return nil
 }

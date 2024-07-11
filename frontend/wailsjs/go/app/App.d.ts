@@ -3,7 +3,11 @@
 import {player} from '../models';
 import {history} from '../models';
 
+export function Append(arg1:player.Player,arg2:history.AppendRequest):Promise<void>;
+
 export function BackupFolder(arg1:player.Player):Promise<string>;
+
+export function Insert(arg1:player.Player,arg2:history.InsertRequest):Promise<void>;
 
 export function ListPlayers():Promise<Array<player.Player>>;
 

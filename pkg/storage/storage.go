@@ -4,16 +4,62 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 )
 
 func New() *Storage {
-	return &Storage{}
+	return &Storage{
+		mu: sync.Mutex{},
+	}
 }
 
 type Storage struct {
+	mu sync.Mutex
 }
 
 func (s *Storage) WriteFile(payload []byte, pathSegments ...string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.writeFile(payload, pathSegments...)
+}
+
+func (s *Storage) DeletePath(pathSegments ...string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.deletePath(pathSegments...)
+}
+
+func (s *Storage) Exists(pathSegments ...string) (bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.exists(pathSegments...)
+}
+
+func (s *Storage) CreateDir(pathSegments ...string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.createDir(pathSegments...)
+}
+
+func (s *Storage) ReadFile(pathSegments ...string) ([]byte, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.readFile(pathSegments...)
+}
+
+func (s *Storage) ReadDir(pathSegments ...string) ([]os.DirEntry, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.readDir(pathSegments...)
+}
+
+func (s *Storage) writeFile(payload []byte, pathSegments ...string) error {
 	if len(pathSegments) == 0 {
 		return fmt.Errorf("no path segments provided")
 	}
@@ -21,13 +67,13 @@ func (s *Storage) WriteFile(payload []byte, pathSegments ...string) error {
 	fp := filepath.Join(pathSegments...)
 
 	dirPath := filepath.Dir(fp)
-	ok, err := s.Exists(dirPath)
+	ok, err := s.exists(dirPath)
 	if err != nil {
 		return fmt.Errorf("could not check if file path exists: %v", err)
 	}
 
 	if !ok {
-		if err := s.CreateDir(dirPath); err != nil {
+		if err := s.createDir(dirPath); err != nil {
 			return fmt.Errorf("could not file path directory: %v", err)
 		}
 	}
@@ -39,13 +85,13 @@ func (s *Storage) WriteFile(payload []byte, pathSegments ...string) error {
 	return nil
 }
 
-func (s *Storage) DeletePath(pathSegments ...string) error {
+func (s *Storage) deletePath(pathSegments ...string) error {
 	if len(pathSegments) == 0 {
 		return fmt.Errorf("no path segments provided")
 	}
 
 	fp := filepath.Join(pathSegments...)
-	ok, err := s.Exists(fp)
+	ok, err := s.exists(fp)
 	if err != nil {
 		return err
 	}
@@ -61,7 +107,7 @@ func (s *Storage) DeletePath(pathSegments ...string) error {
 	return nil
 }
 
-func (s *Storage) Exists(pathSegments ...string) (bool, error) {
+func (s *Storage) exists(pathSegments ...string) (bool, error) {
 	if len(pathSegments) == 0 {
 		return false, fmt.Errorf("no path segments provided")
 	}
@@ -80,7 +126,7 @@ func (s *Storage) Exists(pathSegments ...string) (bool, error) {
 	return false, fmt.Errorf("could not check if path exists: %w", err)
 }
 
-func (s *Storage) CreateDir(pathSegments ...string) error {
+func (s *Storage) createDir(pathSegments ...string) error {
 	if len(pathSegments) == 0 {
 		return fmt.Errorf("no path segments provided")
 	}
@@ -94,7 +140,7 @@ func (s *Storage) CreateDir(pathSegments ...string) error {
 	return nil
 }
 
-func (s *Storage) ReadFile(pathSegments ...string) ([]byte, error) {
+func (s *Storage) readFile(pathSegments ...string) ([]byte, error) {
 	if len(pathSegments) == 0 {
 		return nil, fmt.Errorf("no path segments provided")
 	}
@@ -109,7 +155,7 @@ func (s *Storage) ReadFile(pathSegments ...string) ([]byte, error) {
 	return bytes, nil
 }
 
-func (s *Storage) ReadDir(pathSegments ...string) ([]os.DirEntry, error) {
+func (s *Storage) readDir(pathSegments ...string) ([]os.DirEntry, error) {
 	if len(pathSegments) == 0 {
 		return nil, fmt.Errorf("no path segments provided")
 	}
